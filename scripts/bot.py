@@ -13,18 +13,18 @@ def format_changelog(changelog, repo):
     for line in changelog.splitlines():
         if line.strip().startswith('* **'):
             try:
-                # Format: * **Title** (hash) -> - <b>Title</b> (hash-link)
+                # Format: * **Title** (hash) -> • <b>Title</b> (hash-link)
                 parts = line.split('**')
                 title = parts[1]
                 hash_part = parts[2].strip()  # e.g., "(a1b2c3d)"
                 short_hash = hash_part.strip('()')
                 commit_url = f"https://github.com/{repo}/commit/{short_hash}"
-                formatted_line = f"- <b>{escape_html(title)}</b> (<a href=\"{commit_url}\">{short_hash}</a>)"
+                formatted_line = f"• <b>{escape_html(title)}</b> (<a href=\"{commit_url}\">{short_hash}</a>)"
                 formatted_lines.append(formatted_line)
             except Exception:
                 formatted_lines.append(escape_html(line))
         elif line.strip().startswith('* '):
-            formatted_lines.append(escape_html(line).replace('* ', '- '))
+            formatted_lines.append(escape_html(line).replace('* ', '• '))
         else:
             stripped = line.strip()
             if stripped:
