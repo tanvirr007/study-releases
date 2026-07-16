@@ -56,6 +56,11 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk
           cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/CQ.apk
 
+      - name: Get build metadata
+        run: |
+          echo "COMMIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "BUILD_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -72,11 +77,17 @@ jobs:
           
           # Create the new 'latest' release with the APKs
           gh release create latest \
-            --title "Latest Build (v${{ env.VERSION_NAME }}.${{ github.run_number }})" \
-            --notes "This release is automatically updated with the latest build.
+            --title "v${{ env.VERSION_NAME }}.${{ github.run_number }}" \
+            --notes "> [!NOTE]
+            > This release tag tracks the **latest master build** and is updated automatically on every push.
             
-            ### Direct Downloads:
-            * **Versioned APK:** [CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk](https://github.com/${{ github.repository }}/releases/download/latest/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk)
-            * **Latest APK (Permanent Link):** [CQ.apk](https://github.com/${{ github.repository }}/releases/download/latest/CQ.apk)" \
+            ### 📦 Build Information
+            * **Version:** \`v${{ env.VERSION_NAME }}.${{ github.run_number }}\`
+            * **Commit:** [\`${{ env.COMMIT_HASH }}\`](https://github.com/${{ github.repository }}/commit/${{ env.COMMIT_HASH }})
+            * **Build Time:** \`${{ env.BUILD_TIME }}\`
+            
+            ### 🔗 Direct Downloads
+            * 📥 **Versioned APK:** [CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk](https://github.com/${{ github.repository }}/releases/download/latest/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk)
+            * 🔄 **Latest APK (Permanent Link):** [CQ.apk](https://github.com/${{ github.repository }}/releases/download/latest/CQ.apk)" \
             app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk \
             app/build/outputs/apk/release/CQ.apk
