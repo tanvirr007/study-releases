@@ -88,5 +88,7 @@ dependencies {
 }
 
 tasks.register("printVersionName") {
-    println(android.defaultConfig.versionName)
+    doLast {
+        println(android.defaultConfig.versionName)
+    }
 }
