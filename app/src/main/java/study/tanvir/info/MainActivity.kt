@@ -23,6 +23,12 @@ import androidx.core.net.toUri
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.view.View
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
+import android.widget.Toast
 import androidx.core.view.WindowInsetsControllerCompat
 import study.tanvir.info.databinding.ActivityMainBinding
 
@@ -67,6 +73,7 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         setupDownloadSupport()
         setOnBackPressed()
+        setupOfflineRetry()
     }
 
     override fun onPause() {
@@ -118,6 +125,20 @@ class MainActivity : AppCompatActivity() {
                     Handler(Looper.getMainLooper()).postDelayed({
                         isWebViewFirstPageLoaded = true
                     }, 500)
+                }
+            }
+
+            override fun onReceivedError(
+                view: WebView?,
+                request: WebResourceRequest?,
+                error: WebResourceError?
+            ) {
+                super.onReceivedError(view, request, error)
+                if (request?.isForMainFrame == true) {
+                    binding.webView.visibility = View.GONE
+                    binding.offlineLayout.visibility = View.VISIBLE
+                    // Hide splash screen immediately if first page load fails
+                    isWebViewFirstPageLoaded = true
                 }
             }
         }
@@ -194,5 +215,31 @@ class MainActivity : AppCompatActivity() {
             val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
             dm.enqueue(request)
         }
+    }
+
+    private fun setupOfflineRetry() {
+        binding.btnRetry.setOnClickListener {
+            if (isNetworkAvailable()) {
+                binding.offlineLayout.visibility = View.GONE
+                binding.webView.visibility = View.VISIBLE
+                val url = binding.webView.url
+                if (url.isNullOrEmpty()) {
+                    binding.webView.loadUrl(WEB_URL)
+                } else {
+                    binding.webView.reload()
+                }
+            } else {
+                Toast.makeText(this, "No internet connection detected.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNetwork = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+               capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+               capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
     }
 }
