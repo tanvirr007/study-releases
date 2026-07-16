@@ -62,6 +62,7 @@ jobs:
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
           BUILD_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          APK_SHA=$(sha256sum app/build/outputs/apk/release/CQ.apk | awk '{print $1}')
           echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
           echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
           
@@ -97,13 +98,17 @@ jobs:
           
           # Generate release_notes.md
           cat <<EOF | sed 's/^          //' > release_notes.md
+          <img src="https://raw.githubusercontent.com/${{ github.repository }}/master/app-icon.png" width="48" height="48" style="border-radius: 10px;" /> **CQ Android WebView App**
+          
           > [!NOTE]
           > This release tracks build \`v${{ env.VERSION_NAME }}.${{ github.run_number }}\`
           
           ### 📦 Build Information
           * **Version:** \`v${{ env.VERSION_NAME }}.${{ github.run_number }}\`
           * **Commit:** [\`$COMMIT_HASH\`](https://github.com/${{ github.repository }}/commit/$COMMIT_HASH)
-          * **Build Time:** \`$BUILD_TIME\`
+          * **Build Time:** \`${BUILD_TIME}\`
+          * **Android:** \`9.0+\`
+          * 🔒 **SHA-256:** \`$APK_SHA\`
           
           ### 🔗 Direct Downloads
           * 📥 **Versioned APK:** [CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk](https://github.com/${{ github.repository }}/releases/download/v${{ env.VERSION_NAME }}.${{ github.run_number }}/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk)
