@@ -28,7 +28,13 @@ def format_changelog(changelog, repo):
         else:
             stripped = line.strip()
             if stripped:
-                formatted_lines.append(f"  - {escape_html(stripped)}")
+                if stripped.startswith('- '):
+                    content = stripped[2:].strip()
+                elif stripped.startswith('* '):
+                    content = stripped[2:].strip()
+                else:
+                    content = stripped
+                formatted_lines.append(f"  - {escape_html(content)}")
     return "\n".join(formatted_lines)
 
 def send_photo(token, chat_id, filepath, caption, reply_markup):
