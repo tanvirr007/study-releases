@@ -1,15 +1,15 @@
 package study.tanvir.info
 
 import android.annotation.SuppressLint
-
+import android.app.DownloadManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
-
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
-
+import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -19,7 +19,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
-
+import androidx.core.net.toUri
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -33,6 +33,20 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val WEB_URL = "https://study-tanvirr007.vercel.app"
+
+        private val jsBlobHook = """
+            (function() {
+                if (window.__blobHookInstalled) return;
+                window.__blobHookInstalled = true;
+
+                const orig = URL.createObjectURL;
+                URL.createObjectURL = function(blob) {
+                    window._lastBlob = blob;
+                    try { BlobDownloader.onDownloadPreparing(); } catch(e) {}
+                    return orig.call(URL, blob);
+                };
+            })();
+        """.trimIndent()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,6 +65,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         setupWebView()
+        setupDownloadSupport()
         setOnBackPressed()
     }
 
@@ -66,8 +81,14 @@ class MainActivity : AppCompatActivity() {
             mediaPlaybackRequiresUserGesture = false
         }
 
+        addJavascriptInterface(
+            BlobDownloader(this@MainActivity),
+            "BlobDownloader"
+        )
+
         webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                view?.evaluateJavascript(jsBlobHook, null)
 
                 if (url?.endsWith("/dashboard") == true
                     || url?.endsWith("/dashboard/") == true
@@ -132,6 +153,34 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             )
+        }
+    }
+
+    private fun setupDownloadSupport() {
+        binding.webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+            if (url.startsWith("blob:")) {
+                binding.webView.fetchBlob(url, mimeType, contentDisposition)
+                return@setDownloadListener
+            }
+
+            val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
+
+            val request = DownloadManager.Request(url.toUri()).apply {
+                setMimeType(mimeType)
+                addRequestHeader("User-Agent", userAgent)
+                setTitle(fileName)
+                setDescription("Downloading file…")
+                setNotificationVisibility(
+                    DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+                )
+                setDestinationInExternalPublicDir(
+                    Environment.DIRECTORY_DOWNLOADS,
+                    fileName
+                )
+            }
+
+            val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+            dm.enqueue(request)
         }
     }
 }
