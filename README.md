@@ -73,11 +73,24 @@ When the workflow runs, it recreates the keystore dynamically and builds the pro
 
 ### How Versioning Works
 * **Base Version**: Defined locally in [app/build.gradle.kts](app/build.gradle.kts) via the `versionName` property (e.g., `"1.0"`).
-* **CI/CD Builds**: The pipeline dynamically updates the parameters:
-  * **`versionCode`** becomes the GitHub Actions workflow run number (`${{ github.run_number }}`).
-  * **`versionName`** is set to `<base_version_name>.<run_number>` (e.g., `1.0.12`).
+* **CI/CD Builds**: The GitHub Actions pipeline dynamically injects and updates these parameters prior to compilation:
+  * **`versionCode`**: Map to the GitHub Actions run number (`${{ github.run_number }}`). This is a strictly incrementing integer required by Android to determine if a build is newer.
+  * **`versionName`**: Constructed dynamically by combining the local base version and the run number: `<base_version_name>.<run_number>` (e.g., `1.0.12`).
 
-To bump the major/minor version (e.g., from `1.0` to `1.1`), edit the `versionName` string inside [app/build.gradle.kts](app/build.gradle.kts).
+### How to Bump the Version (Step-by-Step)
+1. Open [app/build.gradle.kts](app/build.gradle.kts).
+2. Locate the `versionName` variable in the `defaultConfig` block (around line 20):
+   ```kotlin
+   versionName = "1.0"
+   ```
+3. Change `"1.0"` to your new desired base version (e.g., `"1.1"` or `"2.0"`).
+4. Stage, commit, and push the change to GitHub:
+   ```bash
+   git add app/build.gradle.kts
+   git commit -m "chore: bump version to 1.1"
+   git push
+   ```
+   The next build on GitHub Actions will automatically start numbering with your new base version prefix (e.g., `v1.1.13`).
 
 ### Upgrade and Downgrade Constraints
 Android OS enforces specific constraints for security and data integrity:
