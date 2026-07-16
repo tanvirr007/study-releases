@@ -68,18 +68,15 @@ jobs:
           path: app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk
           if-no-files-found: error
 
-      - name: Create or Update "Latest" Release
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Delete the existing 'latest' release and tag (so we start fresh with only this build's APKs)
-          gh release delete latest --yes --cleanup-tag || true
-          
-          # Create the new 'latest' release with the APKs
-          gh release create latest \
+          # Create the new release with the APKs for this specific build tag
+          gh release create "v${{ env.VERSION_NAME }}.${{ github.run_number }}" \
             --title "v${{ env.VERSION_NAME }}.${{ github.run_number }}" \
             --notes "> [!NOTE]
-            > This release tag tracks the **latest master build** and is updated automatically on every push.
+            > This release tracks build \`v${{ env.VERSION_NAME }}.${{ github.run_number }}\`.
             
             ### 📦 Build Information
             * **Version:** \`v${{ env.VERSION_NAME }}.${{ github.run_number }}\`
@@ -87,7 +84,7 @@ jobs:
             * **Build Time:** \`${{ env.BUILD_TIME }}\`
             
             ### 🔗 Direct Downloads
-            * 📥 **Versioned APK:** [CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk](https://github.com/${{ github.repository }}/releases/download/latest/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk)
-            * 🔄 **Latest APK (Permanent Link):** [CQ.apk](https://github.com/${{ github.repository }}/releases/download/latest/CQ.apk)" \
+            * 📥 **Versioned APK:** [CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk](https://github.com/${{ github.repository }}/releases/download/v${{ env.VERSION_NAME }}.${{ github.run_number }}/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk)
+            * 🔄 **Latest APK (Permanent Link):** [CQ.apk](https://github.com/${{ github.repository }}/releases/latest/download/CQ.apk)" \
             app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk \
             app/build/outputs/apk/release/CQ.apk
