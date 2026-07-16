@@ -119,6 +119,10 @@ jobs:
           ### 📝 Changelog
           ${CHANGELOG}
           EOF
+          echo "APK_SHA=$APK_SHA" >> $GITHUB_ENV
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -137,3 +141,17 @@ jobs:
             -F release_notes.md \
             app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk \
             app/build/outputs/apk/release/CQ.apk
+
+      - name: Send Telegram Notification
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VERSION: "${{ env.VERSION_NAME }}.${{ github.run_number }}"
+          COMMIT_HASH: "${{ env.COMMIT_HASH }}"
+          BUILD_TIME: "${{ env.BUILD_TIME }}"
+          APK_SHA: "${{ env.APK_SHA }}"
+          CHANGELOG: "${{ env.CHANGELOG }}"
+          APK_VERSIONED_PATH: "app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk"
+          APK_LATEST_PATH: "app/build/outputs/apk/release/CQ.apk"
+        run: python3 scripts/bot.py
