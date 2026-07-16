@@ -110,11 +110,11 @@ jobs:
           * **Commit:** [\`$COMMIT_HASH\`](https://github.com/${{ github.repository }}/commit/$COMMIT_HASH)
           * **Build Time:** \`${BUILD_TIME}\`
           * **Android:** \`9.0+\`
-          * 🔒 **SHA-256:** \`$APK_SHA\`
+          * **SHA-256:** \`$APK_SHA\`
           
           ### 🔗 Direct Downloads
-          * 📥 **Versioned APK:** [CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk](https://github.com/${{ github.repository }}/releases/download/v${{ env.VERSION_NAME }}.${{ github.run_number }}/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk)
-          * 🔄 **Latest APK (Permanent Link):** [CQ.apk](https://github.com/${{ github.repository }}/releases/latest/download/CQ.apk)
+          * **Versioned APK:** [CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk](https://github.com/${{ github.repository }}/releases/download/v${{ env.VERSION_NAME }}.${{ github.run_number }}/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk)
+          * **Latest APK (Permanent Link):** [CQ.apk](https://github.com/${{ github.repository }}/releases/latest/download/CQ.apk)
           
           ### 📝 Changelog
           ${CHANGELOG}
