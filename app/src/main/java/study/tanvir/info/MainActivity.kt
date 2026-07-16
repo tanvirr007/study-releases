@@ -74,6 +74,7 @@ class MainActivity : AppCompatActivity() {
         setupDownloadSupport()
         setOnBackPressed()
         setupOfflineRetry()
+        setupSwipeToRefresh()
     }
 
     override fun onPause() {
@@ -120,6 +121,7 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 url?.let { updateSystemBarTheme(it) }
                 android.webkit.CookieManager.getInstance().flush()
+                binding.swipeRefreshLayout.isRefreshing = false
 
                 if (!isWebViewFirstPageLoaded) {
                     Handler(Looper.getMainLooper()).postDelayed({
@@ -137,6 +139,7 @@ class MainActivity : AppCompatActivity() {
                 if (request?.isForMainFrame == true) {
                     binding.webView.visibility = View.GONE
                     binding.offlineLayout.visibility = View.VISIBLE
+                    binding.swipeRefreshLayout.isRefreshing = false
                     // Hide splash screen immediately if first page load fails
                     isWebViewFirstPageLoaded = true
                 }
@@ -241,5 +244,16 @@ class MainActivity : AppCompatActivity() {
         return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+    }
+
+    private fun setupSwipeToRefresh() {
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            binding.webView.reload()
+        }
+
+        // Disable swipe to refresh when webview is scrolled down
+        binding.swipeRefreshLayout.setOnChildScrollUpCallback { _, _ ->
+            binding.webView.canScrollVertically(-1)
+        }
     }
 }
