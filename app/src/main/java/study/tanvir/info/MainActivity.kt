@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private var isWebViewFirstPageLoaded = false
+    private var backPressedTime: Long = 0
 
     companion object {
         const val WEB_URL = "https://study-tanvirr007.vercel.app"
@@ -173,19 +174,30 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun handleBackPress() {
+        if (binding.webView.canGoBack()) {
+            binding.webView.goBack()
+        } else {
+            if (backPressedTime + 2000 > System.currentTimeMillis()) {
+                finish()
+            } else {
+                Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show()
+                backPressedTime = System.currentTimeMillis()
+            }
+        }
+    }
+
     private fun setOnBackPressed() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
-                if (binding.webView.canGoBack()) binding.webView.goBack()
-                else finish()
+                handleBackPress()
             }
         } else {
             onBackPressedDispatcher.addCallback(
                 this,
                 object : OnBackPressedCallback(true) {
                     override fun handleOnBackPressed() {
-                        if (binding.webView.canGoBack()) binding.webView.goBack()
-                        else finish()
+                        handleBackPress()
                     }
                 }
             )
