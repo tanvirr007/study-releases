@@ -79,15 +79,13 @@ jobs:
           else
             while read -r hash title; do
               if [ ! -z "$hash" ]; then
-                CHANGELOG="${CHANGELOG}* **$title** (${hash:0:7})
-"
+                CHANGELOG="${CHANGELOG}* **$title** (${hash:0:7})"$'\n'
                 # Get body of commit, filter out metadata
                 body=$(git log -1 --pretty=format:"%b" "$hash" | grep -v -E "^Signed-off-by:|^Change-Id:|^Co-authored-by:" || true)
                 if [ ! -z "$body" ]; then
                   while IFS= read -r line; do
                     if [ ! -z "$line" ]; then
-                      CHANGELOG="${CHANGELOG}  $line
-"
+                      CHANGELOG="${CHANGELOG}  $line"$'\n'
                     fi
                   done <<< "$body"
                 fi
