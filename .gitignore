@@ -17,3 +17,12 @@
 local.properties
 keystore.properties
 *.jks
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+env/
