@@ -69,6 +69,11 @@ class MainActivity : AppCompatActivity() {
         setOnBackPressed()
     }
 
+    override fun onPause() {
+        super.onPause()
+        android.webkit.CookieManager.getInstance().flush()
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() = with(binding.webView) {
         settings.apply {
@@ -79,6 +84,12 @@ class MainActivity : AppCompatActivity() {
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             cacheMode = WebSettings.LOAD_DEFAULT
             mediaPlaybackRequiresUserGesture = false
+        }
+
+        // Enable cookies and accept third-party cookies
+        android.webkit.CookieManager.getInstance().apply {
+            setAcceptCookie(true)
+            setAcceptThirdPartyCookies(this@with, true)
         }
 
         addJavascriptInterface(
@@ -101,6 +112,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 url?.let { updateSystemBarTheme(it) }
+                android.webkit.CookieManager.getInstance().flush()
 
                 if (!isWebViewFirstPageLoaded) {
                     Handler(Looper.getMainLooper()).postDelayed({
