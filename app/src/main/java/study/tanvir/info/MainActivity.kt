@@ -30,6 +30,11 @@ import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.widget.Toast
 import androidx.core.view.WindowInsetsControllerCompat
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.net.Uri
+import android.webkit.ValueCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import study.tanvir.info.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -37,6 +42,19 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var isWebViewFirstPageLoaded = false
     private var backPressedTime: Long = 0
+    private var uploadMessage: ValueCallback<Array<Uri>>? = null
+
+    private val fileChooserLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val results = WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
+            uploadMessage?.onReceiveValue(results)
+        } else {
+            uploadMessage?.onReceiveValue(null)
+        }
+        uploadMessage = null
+    }
 
     companion object {
         const val WEB_URL = "https://study-tanvirr007.vercel.app"
@@ -150,6 +168,24 @@ class MainActivity : AppCompatActivity() {
         webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 url?.let { updateSystemBarTheme(it) }
+            }
+
+            override fun onShowFileChooser(
+                webView: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>?,
+                fileChooserParams: FileChooserParams?
+            ): Boolean {
+                uploadMessage?.onReceiveValue(null)
+                uploadMessage = filePathCallback
+
+                try {
+                    val intent = fileChooserParams?.createIntent()
+                    fileChooserLauncher.launch(intent)
+                } catch (e: ActivityNotFoundException) {
+                    uploadMessage = null
+                    return false
+                }
+                return true
             }
         }
 
