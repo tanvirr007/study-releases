@@ -10,6 +10,8 @@ jobs:
     name: Build Release APK
     if: github.repository_owner == 'tanvirr007'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -49,9 +51,32 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew assembleRelease
 
+      - name: Prepare APK files for release
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk
+          cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/CQ.apk
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "CQ v${{ env.VERSION_NAME }}.${{ github.run_number }}"
-          path: app/build/outputs/apk/release/*.apk
+          name: "CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}"
+          path: app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk
           if-no-files-found: error
+
+      - name: Create or Update "Latest" Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Delete the existing 'latest' release and tag (so we start fresh with only this build's APKs)
+          gh release delete latest --yes --cleanup-tag || true
+          
+          # Create the new 'latest' release with the APKs
+          gh release create latest \
+            --title "Latest Build (v${{ env.VERSION_NAME }}.${{ github.run_number }})" \
+            --notes "This release is automatically updated with the latest build.
+            
+            ### Direct Downloads:
+            * **Versioned APK:** [CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk](https://github.com/${{ github.repository }}/releases/download/latest/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk)
+            * **Latest APK (Permanent Link):** [CQ.apk](https://github.com/${{ github.repository }}/releases/download/latest/CQ.apk)" \
+            app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk \
+            app/build/outputs/apk/release/CQ.apk
