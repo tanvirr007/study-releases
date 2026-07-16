@@ -98,7 +98,9 @@ jobs:
           
           # Generate release_notes.md
           cat <<EOF | sed 's/^          //' > release_notes.md
-          <img src="https://raw.githubusercontent.com/${{ github.repository }}/master/app-icon.png" width="48" height="48" style="border-radius: 10px;" /> **CQ Android WebView App**
+          ![CQ Banner](https://raw.githubusercontent.com/${{ github.repository }}/master/update.png)
+          
+          **CQ Android WebView App**
           
           > [!NOTE]
           > This release tracks build \`v${{ env.VERSION_NAME }}.${{ github.run_number }}\`
