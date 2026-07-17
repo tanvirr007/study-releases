@@ -100,31 +100,21 @@ object UpdateChecker {
         try {
             val jsonObject = JSONObject(jsonResponse)
             val tagName = jsonObject.optString("tag_name", "")
-            val changelog = jsonObject.optString("body", "No changelog provided.")
+            val rawBody = jsonObject.optString("body", "No changelog provided.")
+            val htmlUrl = jsonObject.optString("html_url", "https://github.com/tanvirr007/study-releases/releases/latest")
             
             // Extract remote version code (last digit/number segment from tag, e.g. "v2.1.15" -> 15)
             val remoteVersionCode = tagName.substringAfterLast(".").toLongOrNull() ?: 0L
             
-            // Extract the download URL for the APK file
-            var apkUrl = FALLBACK_APK_URL
-            val assetsArray = jsonObject.optJSONArray("assets")
-            if (assetsArray != null) {
-                for (i in 0 until assetsArray.length()) {
-                    val asset = assetsArray.getJSONObject(i)
-                    val name = asset.optString("name", "")
-                    if (name.endsWith(".apk")) {
-                        apkUrl = asset.optString("browser_download_url", apkUrl)
-                        break
-                    }
-                }
-            }
+            // Extract and clean up only the Changelog section
+            val changelog = extractAndCleanChangelog(rawBody)
 
             // If a newer version is available
             if (remoteVersionCode > localVersionCode) {
-                showUpdateNotification(activity.applicationContext, tagName, apkUrl)
+                showUpdateNotification(activity.applicationContext, tagName, htmlUrl)
                 Handler(Looper.getMainLooper()).post {
                     if (!activity.isFinishing && !activity.isDestroyed) {
-                        showUpdateDialog(activity, tagName, changelog, apkUrl)
+                        showUpdateDialog(activity, tagName, changelog, htmlUrl)
                     }
                 }
             } else {
@@ -133,6 +123,24 @@ object UpdateChecker {
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing release JSON", e)
         }
+    }
+
+    private fun extractAndCleanChangelog(body: String): String {
+        val header = "### 📝 Changelog"
+        val startIndex = body.indexOf(header)
+        val rawText = if (startIndex != -1) {
+            body.substring(startIndex + header.length).trim()
+        } else {
+            body
+        }
+
+        // Clean up Markdown formatting to make it clean text for standard Android TextViews
+        return rawText
+            .replace(Regex("\\*\\*"), "") // Remove bold indicators
+            .replace(Regex("\\*\\s+"), "• ") // Convert * bullets to standard round bullets
+            .replace(Regex("(?m)^\\s*\\*\\s+"), "  - ") // Convert sub-bullets (nested asterisks)
+            .replace(Regex("`"), "") // Remove code block ticks
+            .trim()
     }
 
     private fun showUpdateDialog(
