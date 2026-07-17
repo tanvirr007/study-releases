@@ -303,31 +303,9 @@ def monitor():
     total_tasks = count_dry_run_tasks()
     print(f"Detected {total_tasks} tasks")
 
-    if telegram_ok:
-        msg = (
-            f"<b>Building APK...</b>\n\n"
-            f"• Setup JDK 21: <code>Completed</code>\n"
-            f"• Sign Info: <code>Configured</code>\n"
-            f"• Version Name: <code>Set</code>\n\n"
-            f"• APP: <code>{escape_html(app_name)}</code>\n"
-            f"• VERSION: <code>v{escape_html(version)}</code>\n"
-            f"• BRANCH: <code>{escape_html(ref_name)}</code>\n"
-            f"• PROGRESS: <code>0% (0/{total_tasks})</code>\n"
-            f"• CURRENT: <code>starting...</code>\n"
-            f"• ELAPSED TIME: <code>00m:00s</code>"
-        )
-        try:
-            resp = send_message(token, chat_id, msg)
-            data = json.loads(resp)
-            message_id = data['result']['message_id']
-            print(f"Telegram: Initial message sent (id: {message_id})")
-        except Exception as e:
-            print(f"Warning: Failed to send initial message: {e}")
-            telegram_ok = False
-
-    # ── Phase 3: Build with live progress ──
+    # Helper variables for tracking progress
     completed = 0
-    current_task = "starting..."
+    current_task = "Setup JDK 21"
     failed_task = None
     start_time = time.time()
     lock = threading.Lock()
@@ -340,18 +318,50 @@ def monitor():
         pct = min(int(c / total_tasks * 100), 99) if total_tasks > 0 else 0
         text = (
             f"<b>Building APK...</b>\n\n"
-            f"• Setup JDK 21: <code>Completed</code>\n"
-            f"• Sign Info: <code>Configured</code>\n"
-            f"• Version Name: <code>Set</code>\n\n"
             f"• APP: <code>{escape_html(app_name)}</code>\n"
             f"• VERSION: <code>v{escape_html(version)}</code>\n"
             f"• BRANCH: <code>{escape_html(ref_name)}</code>\n"
             f"• PROGRESS: <code>{pct}% ({c}/{total_tasks})</code>\n"
-            f"• CURRENT: <code>{escape_html(ct)}</code>\n"
-            f"• ELAPSED TIME: <code>{format_time(elapsed)}</code>"
+            f"• ELAPSED TIME: <code>{format_time(elapsed)}</code>\n"
+            f"• CURRENT:\n<blockquote>{escape_html(ct)}</blockquote>"
         )
         return text
 
+    # ── Phase 2: Send initial message and pre-build setup logs ──
+    if telegram_ok:
+        try:
+            resp = send_message(token, chat_id, make_progress_msg())
+            data = json.loads(resp)
+            message_id = data['result']['message_id']
+            print(f"Telegram: Initial message sent (id: {message_id})")
+        except Exception as e:
+            print(f"Warning: Failed to send initial message: {e}")
+            telegram_ok = False
+
+        if telegram_ok and message_id:
+            # Update to Write sign info
+            time.sleep(1.5)
+            with lock:
+                current_task = "Write sign info"
+            try:
+                edit_message(token, chat_id, message_id, make_progress_msg())
+            except Exception:
+                pass
+
+            # Update to Set version name
+            time.sleep(1.5)
+            with lock:
+                current_task = "Set version name"
+            try:
+                edit_message(token, chat_id, message_id, make_progress_msg())
+            except Exception:
+                pass
+
+            # Reset task state to compile phase
+            with lock:
+                current_task = "starting..."
+
+    # ── Phase 3: Build with live progress ──
     def update_loop():
         last_text = ""
         while running:
@@ -411,19 +421,8 @@ def monitor():
     if telegram_ok and message_id:
         if exit_code == 0:
             # Build succeeded
-            apk_path = 'app/build/outputs/apk/release/app-release.apk'
-            apk_size_str = "unknown"
-            apk_sha = "unknown"
-            if os.path.exists(apk_path):
-                apk_size_str = format_size(os.path.getsize(apk_path))
-                with open(apk_path, 'rb') as f:
-                    apk_sha = hashlib.sha256(f.read()).hexdigest()
-
             text = (
                 f"<b>APK compiled!</b>\n\n"
-                f"• Setup JDK 21: <code>Completed</code>\n"
-                f"• Sign Info: <code>Configured</code>\n"
-                f"• Version Name: <code>Set</code>\n\n"
                 f"• APP: <code>{escape_html(app_name)}</code>\n"
                 f"• VERSION: <code>v{escape_html(version)}</code>\n"
                 f"• BUILD TIME: <code>{format_time(elapsed)}</code>\n"
