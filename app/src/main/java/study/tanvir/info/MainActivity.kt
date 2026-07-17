@@ -49,6 +49,8 @@ class MainActivity : AppCompatActivity() {
     private var uploadMessage: ValueCallback<Array<Uri>>? = null
     private var backgroundedAt: Long = 0L
     private var isAuthenticated = false
+    private var shouldKeepSplashScreen = true
+    private var isInitialLoadStarted = false
 
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -82,7 +84,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
-        splashScreen.setKeepOnScreenCondition { !isWebViewFirstPageLoaded }
+        splashScreen.setKeepOnScreenCondition { shouldKeepSplashScreen }
 
         // Apply FLAG_SECURE window flag based on user preferences
         val prefs = getSharedPreferences("security_prefs", MODE_PRIVATE)
@@ -172,6 +174,7 @@ class MainActivity : AppCompatActivity() {
                 if (!isWebViewFirstPageLoaded) {
                     Handler(Looper.getMainLooper()).postDelayed({
                         isWebViewFirstPageLoaded = true
+                        shouldKeepSplashScreen = false
                     }, 500)
                 }
             }
@@ -188,6 +191,7 @@ class MainActivity : AppCompatActivity() {
                     binding.swipeRefreshLayout.isRefreshing = false
                     // Hide splash screen immediately if first page load fails
                     isWebViewFirstPageLoaded = true
+                    shouldKeepSplashScreen = false
                 }
             }
         }
@@ -218,8 +222,13 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
         }
+    }
 
-        loadUrl(WEB_URL)
+    private fun startInitialLoadIfNeeded() {
+        if (!isInitialLoadStarted) {
+            isInitialLoadStarted = true
+            binding.webView.loadUrl(WEB_URL)
+        }
     }
 
     private fun updateSystemBarTheme(url: String) {
@@ -353,12 +362,14 @@ class MainActivity : AppCompatActivity() {
 
         if (!biometricEnabled) {
             isAuthenticated = false
+            startInitialLoadIfNeeded()
             return
         }
 
         // Grace period: skip lock if away less than 30 seconds and already authenticated
         val timeAway = System.currentTimeMillis() - backgroundedAt
         if (isAuthenticated && backgroundedAt != 0L && timeAway < 30_000) {
+            startInitialLoadIfNeeded()
             return
         }
 
@@ -384,10 +395,12 @@ class MainActivity : AppCompatActivity() {
                 binding.lockOverlay.visibility = View.GONE
                 // Restore system bar theme based on current web page URL
                 updateSystemBarTheme(binding.webView.url ?: WEB_URL)
+                startInitialLoadIfNeeded()
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 // Stay on lock screen, user can tap "Unlock" to retry
+                shouldKeepSplashScreen = false
             }
 
             override fun onAuthenticationFailed() {
@@ -414,6 +427,8 @@ class MainActivity : AppCompatActivity() {
             isAuthenticated = true
             binding.lockOverlay.visibility = View.GONE
             updateSystemBarTheme(binding.webView.url ?: WEB_URL)
+            startInitialLoadIfNeeded()
+            shouldKeepSplashScreen = false
         }
     }
 }
