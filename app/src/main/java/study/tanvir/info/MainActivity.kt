@@ -193,15 +193,23 @@ class MainActivity : AppCompatActivity() {
         webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
-                if (url.startsWith("http://") || url.startsWith("https://")) {
+                
+                // If it's an internal URL (matching our base web app, local files, or content), load inside WebView
+                if (url.startsWith(WEB_URL) || url.startsWith("file://") || url.startsWith("content://")) {
                     return false
                 }
+                
+                // For all other links (external websites or custom schemes like tel, mailto, tg, etc.)
                 try {
                     val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
                     view?.context?.startActivity(intent)
                     return true
                 } catch (e: Exception) {
-                    return true
+                    // Fallback: If it's an external web link but no browser is found, load it in the WebView
+                    if (url.startsWith("http://") || url.startsWith("https://")) {
+                        return false
+                    }
+                    return true // Consume custom protocols to prevent unsupported scheme crashes
                 }
             }
 
