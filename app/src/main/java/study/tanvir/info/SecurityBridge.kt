@@ -33,9 +33,9 @@ class SecurityBridge(private val context: Context) {
     }
 
     @JavascriptInterface
-    fun setBiometricEnabled(enabled: Boolean) {
-        val activity = context as? AppCompatActivity ?: return
-        if (activity.isFinishing || activity.isDestroyed) return
+    fun setBiometricEnabled(enabled: Boolean): Boolean {
+        val activity = context as? AppCompatActivity ?: return false
+        if (activity.isFinishing || activity.isDestroyed) return false
 
         val latch = CountDownLatch(1)
         var success = false
@@ -91,6 +91,8 @@ class SecurityBridge(private val context: Context) {
                 .putBoolean(KEY_BIOMETRIC, enabled)
                 .apply()
         }
+
+        return success
     }
 
     @JavascriptInterface
