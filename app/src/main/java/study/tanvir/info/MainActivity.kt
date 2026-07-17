@@ -64,6 +64,14 @@ class MainActivity : AppCompatActivity() {
         uploadMessage = null
     }
 
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+            Toast.makeText(this, "Notification permission denied. Download status won't be shown.", Toast.LENGTH_LONG).show()
+        }
+    }
+
     companion object {
         const val WEB_URL = "https://study-tanvirr007.vercel.app"
 
@@ -112,6 +120,7 @@ class MainActivity : AppCompatActivity() {
         setupOfflineRetry()
         setupSwipeToRefresh()
         setupLockScreen()
+        checkNotificationPermission()
     }
 
     override fun onResume() {
@@ -135,6 +144,10 @@ class MainActivity : AppCompatActivity() {
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             cacheMode = WebSettings.LOAD_DEFAULT
             mediaPlaybackRequiresUserGesture = false
+            allowFileAccess = true
+            allowContentAccess = true
+            allowFileAccessFromFileURLs = true
+            allowUniversalAccessFromFileURLs = true
         }
 
         // Enable cookies and accept third-party cookies
@@ -167,6 +180,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
+                view?.evaluateJavascript(jsBlobHook, null)
                 url?.let { updateSystemBarTheme(it) }
                 android.webkit.CookieManager.getInstance().flush()
                 binding.swipeRefreshLayout.isRefreshing = false
@@ -292,6 +306,11 @@ class MainActivity : AppCompatActivity() {
                 return@setDownloadListener
             }
 
+            if (url.startsWith("data:")) {
+                handleDataUri(url, mimeType, contentDisposition)
+                return@setDownloadListener
+            }
+
             val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
 
             val request = DownloadManager.Request(url.toUri()).apply {
@@ -310,6 +329,16 @@ class MainActivity : AppCompatActivity() {
 
             val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
             dm.enqueue(request)
+        }
+    }
+
+    private fun handleDataUri(url: String, mimeType: String?, contentDisposition: String?) {
+        try {
+            val resolvedMime = url.substringAfter("data:").substringBefore(";").takeIf { it.isNotEmpty() && !it.contains(",") } ?: mimeType
+            val fileName = URLUtil.guessFileName(url, contentDisposition, resolvedMime)
+            BlobDownloader(this).download(url, resolvedMime, "filename=\"$fileName\"")
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to download data: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -429,6 +458,15 @@ class MainActivity : AppCompatActivity() {
             updateSystemBarTheme(binding.webView.url ?: WEB_URL)
             startInitialLoadIfNeeded()
             shouldKeepSplashScreen = false
+        }
+    }
+
+    private fun checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val permission = "android.permission.POST_NOTIFICATIONS"
+            if (ContextCompat.checkSelfPermission(this, permission) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestNotificationPermissionLauncher.launch(permission)
+            }
         }
     }
 }
