@@ -86,15 +86,22 @@ class MainActivity : AppCompatActivity() {
 
         private val jsBlobHook = """
             (function() {
-                if (window.__blobHookInstalled) return;
-                window.__blobHookInstalled = true;
+                if (!window.__blobHookInstalled) {
+                    window.__blobHookInstalled = true;
+                    const orig = URL.createObjectURL;
+                    URL.createObjectURL = function(blob) {
+                        window._lastBlob = blob;
+                        try { BlobDownloader.onDownloadPreparing(); } catch(e) {}
+                        return orig.call(URL, blob);
+                    };
+                }
 
-                const orig = URL.createObjectURL;
-                URL.createObjectURL = function(blob) {
-                    window._lastBlob = blob;
-                    try { BlobDownloader.onDownloadPreparing(); } catch(e) {}
-                    return orig.call(URL, blob);
-                };
+                if (!window.__printHookInstalled) {
+                    window.__printHookInstalled = true;
+                    window.print = function() {
+                        try { PrintBridge.print(); } catch(e) {}
+                    };
+                }
             })();
         """.trimIndent()
     }
@@ -173,6 +180,11 @@ class MainActivity : AppCompatActivity() {
         addJavascriptInterface(
             SecurityBridge(this@MainActivity),
             "SecurityBridge"
+        )
+
+        addJavascriptInterface(
+            PrintBridge(this@MainActivity, this@with),
+            "PrintBridge"
         )
 
         webViewClient = object : WebViewClient() {
