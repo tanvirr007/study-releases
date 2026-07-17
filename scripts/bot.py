@@ -323,7 +323,7 @@ def monitor():
             f"• BRANCH: <code>{escape_html(ref_name)}</code>\n"
             f"• PROGRESS: <code>{pct}% ({c}/{total_tasks})</code>\n"
             f"• ELAPSED TIME: <code>{format_time(elapsed)}</code>\n"
-            f"• STAGE:\n<blockquote>{escape_html(ct)}</blockquote>"
+            f"\n<b>STAGE:</b>\n<blockquote>{escape_html(ct)}</blockquote>"
         )
         return text
 
