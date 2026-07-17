@@ -100,7 +100,7 @@ jobs:
           
           # Generate release_notes.md
           cat <<EOF | sed 's/^          //' > release_notes.md
-          ![CQ Banner](https://github.com/${{ github.repository }}/blob/master/update.png?raw=true)
+          ![CQ Banner](https://github.com/${{ github.repository }}/blob/master/assets/update.png?raw=true)
           
           **CQ Android WebView App**
           

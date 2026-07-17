@@ -193,7 +193,7 @@ def main():
     }
 
     # Upload photo using multipart/form-data
-    banner_path = "update.png"
+    banner_path = "assets/update.png"
     if os.path.exists(banner_path):
         photo_caption = message
         send_separate_changelog = False
@@ -226,7 +226,7 @@ def main():
             print(f"Error sending photo, falling back to text: {e}")
             send_message(token, chat_id, message, reply_markup)
     else:
-        print("update.png not found, sending as text post...")
+        print("assets/update.png not found, sending as text post...")
         send_message(token, chat_id, message, reply_markup)
 
     # Collect existing APKs
