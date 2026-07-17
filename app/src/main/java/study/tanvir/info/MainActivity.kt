@@ -99,7 +99,7 @@ class MainActivity : AppCompatActivity() {
                 if (!window.__printHookInstalled) {
                     window.__printHookInstalled = true;
                     window.print = function() {
-                        try { PrintBridge.print(); } catch(e) {}
+                        try { PrintBridge.print(document.title); } catch(e) {}
                     };
                 }
             })();

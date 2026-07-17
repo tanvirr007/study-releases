@@ -11,16 +11,23 @@ class PrintBridge(private val activity: Activity, private val webView: WebView) 
 
     @JavascriptInterface
     fun print() {
+        print(null)
+    }
+
+    @JavascriptInterface
+    fun print(customJobName: String?) {
         activity.runOnUiThread {
             val printManager = activity.getSystemService(Context.PRINT_SERVICE) as PrintManager
-            val jobName = "${activity.getString(R.string.app_name)} Document"
+            val resolvedName = customJobName?.trim()?.takeIf { it.isNotEmpty() }
+                ?: webView.title?.trim()?.takeIf { it.isNotEmpty() }
+                ?: "${activity.getString(R.string.app_name)} Document"
             
             // Create a print adapter from the WebView content
-            val printAdapter = webView.createPrintDocumentAdapter(jobName)
+            val printAdapter = webView.createPrintDocumentAdapter(resolvedName)
             
             // Trigger system print dialog
             printManager.print(
-                jobName,
+                resolvedName,
                 printAdapter,
                 PrintAttributes.Builder().build()
             )
