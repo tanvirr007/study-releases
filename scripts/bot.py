@@ -37,6 +37,19 @@ def format_changelog(changelog, repo):
                 formatted_lines.append(f"  - {escape_html(content)}")
     return "\n".join(formatted_lines)
 
+def send_request(req):
+    try:
+        with urllib.request.urlopen(req) as response:
+            return response.read()
+    except Exception as e:
+        if hasattr(e, 'read'):
+            try:
+                error_body = e.read().decode('utf-8')
+                print(f"HTTP Error details: {error_body}")
+            except Exception:
+                pass
+        raise e
+
 def send_photo(token, chat_id, filepath, caption, reply_markup):
     boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
     headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
@@ -79,8 +92,7 @@ def send_photo(token, chat_id, filepath, caption, reply_markup):
         data=payload,
         headers=headers
     )
-    with urllib.request.urlopen(req) as response:
-        return response.read()
+    return send_request(req)
 
 def send_message(token, chat_id, message, reply_markup):
     data = {
@@ -95,8 +107,7 @@ def send_message(token, chat_id, message, reply_markup):
         data=json.dumps(data).encode("utf-8"),
         headers={"Content-Type": "application/json"}
     )
-    with urllib.request.urlopen(req) as response:
-        return response.read()
+    return send_request(req)
 
 def send_media_group(token, chat_id, filepaths):
     boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
@@ -140,8 +151,7 @@ def send_media_group(token, chat_id, filepaths):
         data=payload,
         headers=headers
     )
-    with urllib.request.urlopen(req) as response:
-        return response.read()
+    return send_request(req)
 
 def main():
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -185,10 +195,33 @@ def main():
     # Upload photo using multipart/form-data
     banner_path = "update.png"
     if os.path.exists(banner_path):
+        photo_caption = message
+        send_separate_changelog = False
+        
+        if len(message) > 1024:
+            photo_caption = (
+                f"<b>New update available (v{version})</b>\n\n"
+                f"📦 <b>Build Information:</b>\n"
+                f"- <b>Version:</b> <code>v{version}</code>\n"
+                f"- <b>Commit:</b> <a href=\"https://github.com/{repo}/commit/{commit_hash}\">{commit_hash[:7]}</a>\n"
+                f"- <b>Build Time:</b> <code>{build_time}</code>\n"
+                f"- <b>Android:</b> <code>9.0+</code>\n"
+                f"- <b>SHA-256:</b> <code>{apk_sha}</code>\n\n"
+                f"📝 <i>Changelog is too long and is sent below.</i>"
+            )
+            send_separate_changelog = True
+
         print(f"Uploading banner: {banner_path} with message caption...")
         try:
-            send_photo(token, chat_id, banner_path, message, reply_markup)
+            send_photo(token, chat_id, banner_path, photo_caption, reply_markup)
             print("Successfully sent photo post.")
+            if send_separate_changelog:
+                changelog_message = (
+                    f"📝 <b>Changelog for v{version}:</b>\n"
+                    f"{changelog_html}"
+                )
+                send_message(token, chat_id, changelog_message, None)
+                print("Successfully sent separate changelog message.")
         except Exception as e:
             print(f"Error sending photo, falling back to text: {e}")
             send_message(token, chat_id, message, reply_markup)
