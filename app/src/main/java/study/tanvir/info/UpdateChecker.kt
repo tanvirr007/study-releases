@@ -197,7 +197,7 @@ object UpdateChecker {
         )
 
         val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("New Update Available")
             .setContentText("Version $versionName is available to download.")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
