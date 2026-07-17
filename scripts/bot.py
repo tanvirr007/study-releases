@@ -303,14 +303,15 @@ def monitor():
     total_tasks = count_dry_run_tasks()
     print(f"Detected {total_tasks} tasks")
 
-    # ── Phase 2: Send initial message ──
     if telegram_ok:
         msg = (
             f"<b>Building APK...</b>\n\n"
+            f"• Setup JDK 21: <code>Completed</code>\n"
+            f"• Sign Info: <code>Configured</code>\n"
+            f"• Version Name: <code>Set</code>\n\n"
             f"• APP: <code>{escape_html(app_name)}</code>\n"
             f"• VERSION: <code>v{escape_html(version)}</code>\n"
             f"• BRANCH: <code>{escape_html(ref_name)}</code>\n"
-            f"• COMMIT: <code>{escape_html(commit_hash)}</code>\n"
             f"• PROGRESS: <code>0% (0/{total_tasks})</code>\n"
             f"• CURRENT: <code>starting...</code>\n"
             f"• ELAPSED TIME: <code>00m:00s</code>"
@@ -337,19 +338,18 @@ def monitor():
             c, ct = completed, current_task
         elapsed = time.time() - start_time
         pct = min(int(c / total_tasks * 100), 99) if total_tasks > 0 else 0
-        remaining = (elapsed / c) * (total_tasks - c) if c > 0 else 0
         text = (
             f"<b>Building APK...</b>\n\n"
+            f"• Setup JDK 21: <code>Completed</code>\n"
+            f"• Sign Info: <code>Configured</code>\n"
+            f"• Version Name: <code>Set</code>\n\n"
             f"• APP: <code>{escape_html(app_name)}</code>\n"
             f"• VERSION: <code>v{escape_html(version)}</code>\n"
             f"• BRANCH: <code>{escape_html(ref_name)}</code>\n"
-            f"• COMMIT: <code>{escape_html(commit_hash)}</code>\n"
             f"• PROGRESS: <code>{pct}% ({c}/{total_tasks})</code>\n"
             f"• CURRENT: <code>{escape_html(ct)}</code>\n"
             f"• ELAPSED TIME: <code>{format_time(elapsed)}</code>"
         )
-        if c > 0:
-            text += f"\n• REMAINING TIME: <code>~{format_time(remaining)}</code>"
         return text
 
     def update_loop():
@@ -421,18 +421,18 @@ def monitor():
 
             text = (
                 f"<b>APK compiled!</b>\n\n"
+                f"• Setup JDK 21: <code>Completed</code>\n"
+                f"• Sign Info: <code>Configured</code>\n"
+                f"• Version Name: <code>Set</code>\n\n"
                 f"• APP: <code>{escape_html(app_name)}</code>\n"
                 f"• VERSION: <code>v{escape_html(version)}</code>\n"
-                f"• COMMIT: <code>{escape_html(commit_hash)}</code>\n"
-                f"• SIZE: <code>{apk_size_str}</code>\n"
-                f"• SHA-256: <code>{apk_sha}</code>\n"
                 f"• BUILD TIME: <code>{format_time(elapsed)}</code>\n"
                 f"• TASKS: <code>{completed} executed</code>\n\n"
-                f"Compilation took {format_duration_text(elapsed)}"
+                f"<i>Compilation took {format_duration_text(elapsed)}</i>"
             )
             markup = {"inline_keyboard": [[
-                {"text": "GH Action", "url": action_url},
-                {"text": "Release", "url": release_url}
+                {"text": "Action", "url": action_url},
+                {"text": "Releases", "url": release_url}
             ]]}
             try:
                 edit_message(token, chat_id, message_id, text, markup)
@@ -446,13 +446,12 @@ def monitor():
                 f"<b>Build failed!</b>\n\n"
                 f"• APP: <code>{escape_html(app_name)}</code>\n"
                 f"• VERSION: <code>v{escape_html(version)}</code>\n"
-                f"• COMMIT: <code>{escape_html(commit_hash)}</code>\n"
                 f"• FAILED AT: <code>{escape_html(ft)}</code>\n"
                 f"• ELAPSED TIME: <code>{format_time(elapsed)}</code>\n"
                 f"• TASKS: <code>{completed}/{total_tasks} completed</code>"
             )
             markup = {"inline_keyboard": [[
-                {"text": "GH Action", "url": action_url}
+                {"text": "Action", "url": action_url}
             ]]}
             try:
                 edit_message(token, chat_id, message_id, text, markup)
