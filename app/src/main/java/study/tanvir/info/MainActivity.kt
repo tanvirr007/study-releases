@@ -137,6 +137,10 @@ class MainActivity : AppCompatActivity() {
         setupSwipeToRefresh()
         setupLockScreen()
         checkNotificationPermission()
+
+        if (isNetworkAvailable()) {
+            UpdateChecker.checkForUpdates(this)
+        }
     }
 
     override fun onResume() {
