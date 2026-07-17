@@ -316,7 +316,7 @@ class MainActivity : AppCompatActivity() {
                     binding.webView.reload()
                 }
             } else {
-                Toast.makeText(this, "No internet connection detected.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "No internet connection detected", Toast.LENGTH_SHORT).show()
             }
         }
     }
