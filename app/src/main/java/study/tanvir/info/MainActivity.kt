@@ -142,6 +142,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         checkBiometricLock()
+        if (isWebViewFirstPageLoaded) {
+            binding.webView.evaluateJavascript("window.dispatchEvent(new Event('focus'));", null)
+        }
     }
 
     override fun onStop() {
