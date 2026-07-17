@@ -176,12 +176,15 @@ class MainActivity : AppCompatActivity() {
                 fileChooserParams: FileChooserParams?
             ): Boolean {
                 uploadMessage?.onReceiveValue(null)
+                val intent = fileChooserParams?.createIntent()
+                if (intent == null) {
+                    return false
+                }
                 uploadMessage = filePathCallback
-
                 try {
-                    val intent = fileChooserParams?.createIntent()
                     fileChooserLauncher.launch(intent)
                 } catch (e: ActivityNotFoundException) {
+                    uploadMessage?.onReceiveValue(null)
                     uploadMessage = null
                     return false
                 }
