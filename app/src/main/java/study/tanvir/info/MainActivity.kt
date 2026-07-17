@@ -191,6 +191,20 @@ class MainActivity : AppCompatActivity() {
         )
 
         webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url?.toString() ?: return false
+                if (url.startsWith("http://") || url.startsWith("https://")) {
+                    return false
+                }
+                try {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
+                    view?.context?.startActivity(intent)
+                    return true
+                } catch (e: Exception) {
+                    return true
+                }
+            }
+
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 view?.evaluateJavascript(jsBlobHook, null)
 
@@ -307,20 +321,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setOnBackPressed() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
-                handleBackPress()
-            }
-        } else {
-            onBackPressedDispatcher.addCallback(
-                this,
-                object : OnBackPressedCallback(true) {
-                    override fun handleOnBackPressed() {
-                        handleBackPress()
-                    }
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    handleBackPress()
                 }
-            )
-        }
+            }
+        )
     }
 
     private fun setupDownloadSupport() {
