@@ -124,6 +124,11 @@ class MainActivity : AppCompatActivity() {
             "BlobDownloader"
         )
 
+        addJavascriptInterface(
+            SecurityBridge(this@MainActivity),
+            "SecurityBridge"
+        )
+
         webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 view?.evaluateJavascript(jsBlobHook, null)
