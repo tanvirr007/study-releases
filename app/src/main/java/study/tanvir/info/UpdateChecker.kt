@@ -197,9 +197,9 @@ object UpdateChecker {
         )
 
         val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("New Update Available")
-            .setContentText("Version $versionName is available to download.")
+            .setContentText("Version $versionName is available to download")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
