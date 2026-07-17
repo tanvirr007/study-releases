@@ -11,12 +11,14 @@ CQ is a modern, lightweight Android wrapper application built with Kotlin. It wr
 * **Dynamic System Bar Theme**: Automatically styles the Android status and navigation bars dynamically based on the active page URL to match the web app's theme color (e.g., light theme on home page, dark theme on internal dashboards).
 * **Native Back Navigation**: Intercepts back gestures/presses to navigate back in the `WebView`'s history rather than closing the app immediately.
 * **Automated CI/CD**: Automatic generation of signed release APKs on every commit to `master` via GitHub Actions.
+* **OTA Update Checker**: Automatically queries the GitHub Releases API on startup (with a 4-hour caching interval) to notify users of new versions via in-app Material Dialogs and System Tray notifications.
 
 ---
 
 ## Key File Locations
 
 * **Core Logic**: [MainActivity.kt](app/src/main/java/study/tanvir/info/MainActivity.kt) — Handles WebView configurations, splash screen, and dynamic bar coloring.
+* **Update Checker Helper**: [UpdateChecker.kt](app/src/main/java/study/tanvir/info/UpdateChecker.kt) — Asynchronously queries and parses GitHub Release metadata, displaying system notifications and alert dialogs.
 * **Gradle Configuration**: [app/build.gradle.kts](app/build.gradle.kts) — Android build settings and dependencies.
 * **CI/CD Workflow**: [.github/workflows/build_apk.yml](.github/workflows/build_apk.yml) — GitHub Actions pipeline config.
 
@@ -100,3 +102,10 @@ Android OS enforces specific constraints for security and data integrity:
 
 > [!WARNING]
 > **Workflow Reset Warning:** If you delete or recreate the GitHub workflow, the GitHub run number will reset back to `1`. If this occurs, existing devices with previous builds (e.g., run number `42`) will fail to install newer builds until they first **uninstall** the old app (which will delete the app's local state), or until you manually increment the base version/versioning logic.
+
+### OTA Update Checks
+The app automatically checks for updates using the GitHub Releases API:
+* **Endpoint:** Queries `https://api.github.com/repos/tanvirr007/study-releases/releases/latest`.
+* **Version Comparison:** The updater extracts the run number from the release's tag (e.g., `15` from `v2.1.15`) and compares it against the local `versionCode`.
+* **Interval:** Checks are run at most once every 4 hours. Local development builds (where `versionCode` is `1`) bypass this cache to allow immediate testing.
+* **Alert Mechanism:** If an update is detected, the user is notified via an in-app dialog and a system tray notification. Tapping "Update Now" redirects them to their system browser to download the signed production APK directly.
