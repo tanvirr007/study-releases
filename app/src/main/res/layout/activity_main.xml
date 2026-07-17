@@ -62,4 +62,55 @@
 
     </LinearLayout>
 
+    <FrameLayout
+        android:id="@+id/lockOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#112240"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:src="@drawable/ic_lock"
+                android:contentDescription="Locked"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="App Locked"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Authenticate to continue"
+                android:textSize="14sp"
+                android:textColor="#8892B0"
+                android:layout_marginBottom="24dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnUnlock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Unlock"
+                style="@style/Widget.Material3.Button" />
+
+        </LinearLayout>
+
+    </FrameLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

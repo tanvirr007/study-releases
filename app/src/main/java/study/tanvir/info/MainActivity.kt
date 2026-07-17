@@ -35,6 +35,9 @@ import android.content.ActivityNotFoundException
 import android.net.Uri
 import android.webkit.ValueCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 import study.tanvir.info.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -43,6 +46,8 @@ class MainActivity : AppCompatActivity() {
     private var isWebViewFirstPageLoaded = false
     private var backPressedTime: Long = 0
     private var uploadMessage: ValueCallback<Array<Uri>>? = null
+    private var backgroundedAt: Long = 0L
+    private var isAuthenticated = false
 
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -94,10 +99,17 @@ class MainActivity : AppCompatActivity() {
         setOnBackPressed()
         setupOfflineRetry()
         setupSwipeToRefresh()
+        setupLockScreen()
     }
 
-    override fun onPause() {
-        super.onPause()
+    override fun onResume() {
+        super.onResume()
+        checkBiometricLock()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        backgroundedAt = System.currentTimeMillis()
         android.webkit.CookieManager.getInstance().flush()
     }
 
@@ -219,6 +231,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleBackPress() {
+        // If locked, back press exits the app (no peeking)
+        if (binding.lockOverlay.visibility == View.VISIBLE) {
+            finish()
+            return
+        }
+
         if (binding.webView.canGoBack()) {
             binding.webView.goBack()
         } else {
@@ -310,6 +328,82 @@ class MainActivity : AppCompatActivity() {
         // Disable swipe to refresh when webview is scrolled down
         binding.swipeRefreshLayout.setOnChildScrollUpCallback { _, _ ->
             binding.webView.canScrollVertically(-1)
+        }
+    }
+
+    private fun setupLockScreen() {
+        binding.btnUnlock.setOnClickListener {
+            showBiometricPrompt()
+        }
+    }
+
+    private fun checkBiometricLock() {
+        val prefs = getSharedPreferences("security_prefs", MODE_PRIVATE)
+        val biometricEnabled = prefs.getBoolean("biometric_enabled", false)
+
+        if (!biometricEnabled) {
+            isAuthenticated = false
+            return
+        }
+
+        // Grace period: skip lock if away less than 30 seconds and already authenticated
+        val timeAway = System.currentTimeMillis() - backgroundedAt
+        if (isAuthenticated && backgroundedAt != 0L && timeAway < 30_000) {
+            return
+        }
+
+        // Show lock
+        isAuthenticated = false
+        binding.lockOverlay.visibility = View.VISIBLE
+
+        // Apply dark system bar theme for lock screen so icons are light/visible against dark background
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+        controller.isAppearanceLightStatusBars = false
+        controller.isAppearanceLightNavigationBars = false
+        binding.root.setBackgroundColor("#112240".toColorInt())
+
+        showBiometricPrompt()
+    }
+
+    private fun showBiometricPrompt() {
+        val executor = ContextCompat.getMainExecutor(this)
+
+        val callback = object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                isAuthenticated = true
+                binding.lockOverlay.visibility = View.GONE
+                // Restore system bar theme based on current web page URL
+                updateSystemBarTheme(binding.webView.url ?: WEB_URL)
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                // Stay on lock screen, user can tap "Unlock" to retry
+            }
+
+            override fun onAuthenticationFailed() {
+                // Wait for final error or success
+            }
+        }
+
+        val authenticators =
+            BiometricManager.Authenticators.BIOMETRIC_WEAK or
+            BiometricManager.Authenticators.DEVICE_CREDENTIAL
+
+        try {
+            val prompt = BiometricPrompt(this, executor, callback)
+
+            val info = BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Unlock App")
+                .setSubtitle("Authenticate to continue")
+                .setAllowedAuthenticators(authenticators)
+                .build()
+
+            prompt.authenticate(info)
+        } catch (_: Exception) {
+            // If biometric is unavailable, unlock anyway
+            isAuthenticated = true
+            binding.lockOverlay.visibility = View.GONE
+            updateSystemBarTheme(binding.webView.url ?: WEB_URL)
         }
     }
 }
