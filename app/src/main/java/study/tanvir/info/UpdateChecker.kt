@@ -67,9 +67,6 @@ object UpdateChecker {
                     }
                     reader.close()
 
-                    // Update last checked time
-                    prefs.edit().putLong(KEY_LAST_CHECK_TIME, System.currentTimeMillis()).apply()
-
                     parseAndProcessResponse(activity, response.toString(), localVersionCode)
                 } else {
                     Log.e(TAG, "Server returned response code: $responseCode")
@@ -118,6 +115,8 @@ object UpdateChecker {
                     }
                 }
             } else {
+                val prefs = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                prefs.edit().putLong(KEY_LAST_CHECK_TIME, System.currentTimeMillis()).apply()
                 Log.d(TAG, "App is up-to-date (Local: $localVersionCode, Remote: $remoteVersionCode)")
             }
         } catch (e: Exception) {
@@ -163,6 +162,8 @@ object UpdateChecker {
                 dialog.dismiss()
             }
             .setNegativeButton("Later") { dialog, _ ->
+                val prefs = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                prefs.edit().putLong(KEY_LAST_CHECK_TIME, System.currentTimeMillis()).apply()
                 dialog.dismiss()
             }
             .show()
