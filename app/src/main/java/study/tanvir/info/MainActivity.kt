@@ -26,6 +26,7 @@ import androidx.core.view.WindowInsetsCompat
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.view.View
+import android.view.WindowManager
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.widget.Toast
@@ -82,6 +83,15 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition { !isWebViewFirstPageLoaded }
+
+        // Apply FLAG_SECURE window flag based on user preferences
+        val prefs = getSharedPreferences("security_prefs", MODE_PRIVATE)
+        val flagSecureDisabled = prefs.getBoolean("flag_secure_disabled", false)
+        if (flagSecureDisabled) {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

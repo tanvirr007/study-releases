@@ -1,6 +1,7 @@
 package study.tanvir.info
 
 import android.content.Context
+import android.view.WindowManager
 import android.webkit.JavascriptInterface
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
@@ -14,6 +15,7 @@ class SecurityBridge(private val context: Context) {
     companion object {
         private const val PREFS_NAME = "security_prefs"
         private const val KEY_BIOMETRIC = "biometric_enabled"
+        private const val KEY_FLAG_SECURE_DISABLED = "flag_secure_disabled"
         private const val AUTH_TIMEOUT_SECONDS = 60L
 
         // BIOMETRIC_WEAK covers both weak and strong sensors.
@@ -88,6 +90,31 @@ class SecurityBridge(private val context: Context) {
                 .edit()
                 .putBoolean(KEY_BIOMETRIC, enabled)
                 .apply()
+        }
+    }
+
+    @JavascriptInterface
+    fun isFlagSecureDisabled(): Boolean {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_FLAG_SECURE_DISABLED, false)
+    }
+
+    @JavascriptInterface
+    fun setFlagSecureDisabled(disabled: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_FLAG_SECURE_DISABLED, disabled)
+            .apply()
+
+        val activity = context as? AppCompatActivity ?: return
+        if (activity.isFinishing || activity.isDestroyed) return
+        activity.runOnUiThread {
+            if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
+            if (disabled) {
+                activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            } else {
+                activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
         }
     }
 }
