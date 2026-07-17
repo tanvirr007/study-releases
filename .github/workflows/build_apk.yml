@@ -53,7 +53,12 @@ jobs:
           versionName: "${{ env.VERSION_NAME }}.${{ github.run_number }}"
 
       - name: Build with Gradle
-        run: ./gradlew assembleRelease
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VERSION: "${{ env.VERSION_NAME }}.${{ github.run_number }}"
+          APP_NAME: "CQ"
+        run: python3 scripts/bot.py monitor
 
       - name: Prepare APK files for release
         run: |
@@ -156,4 +161,4 @@ jobs:
           CHANGELOG: "${{ env.CHANGELOG }}"
           APK_VERSIONED_PATH: "app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk"
           APK_LATEST_PATH: "app/build/outputs/apk/release/CQ.apk"
-        run: python3 scripts/bot.py
+        run: python3 scripts/bot.py release

@@ -4,6 +4,16 @@ import urllib.request
 import urllib.parse
 import json
 import uuid
+import subprocess
+import time
+import hashlib
+import re
+import threading
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Telegram API
+# ═══════════════════════════════════════════════════════════════════
 
 def escape_html(text):
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
@@ -53,13 +63,13 @@ def send_request(req):
 def send_photo(token, chat_id, filepath, caption, reply_markup):
     boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
     headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
-    
+
     body = []
     body.append(f"--{boundary}".encode('utf-8'))
     body.append(b'Content-Disposition: form-data; name="chat_id"')
     body.append(b'')
     body.append(str(chat_id).encode('utf-8'))
-    
+
     body.append(f"--{boundary}".encode('utf-8'))
     body.append(b'Content-Disposition: form-data; name="parse_mode"')
     body.append(b'')
@@ -69,12 +79,12 @@ def send_photo(token, chat_id, filepath, caption, reply_markup):
     body.append(b'Content-Disposition: form-data; name="reply_markup"')
     body.append(b'')
     body.append(json.dumps(reply_markup).encode('utf-8'))
-    
+
     body.append(f"--{boundary}".encode('utf-8'))
     body.append(b'Content-Disposition: form-data; name="caption"')
     body.append(b'')
     body.append(caption.encode('utf-8'))
-    
+
     filename = os.path.basename(filepath)
     body.append(f"--{boundary}".encode('utf-8'))
     body.append(f'Content-Disposition: form-data; name="photo"; filename="{filename}"'.encode('utf-8'))
@@ -82,10 +92,10 @@ def send_photo(token, chat_id, filepath, caption, reply_markup):
     body.append(b'')
     with open(filepath, 'rb') as f:
         body.append(f.read())
-        
+
     body.append(f"--{boundary}--".encode('utf-8'))
     body.append(b'')
-    
+
     payload = b'\r\n'.join(body)
     req = urllib.request.Request(
         f"https://api.telegram.org/bot{token}/sendPhoto",
@@ -94,14 +104,15 @@ def send_photo(token, chat_id, filepath, caption, reply_markup):
     )
     return send_request(req)
 
-def send_message(token, chat_id, message, reply_markup):
+def send_message(token, chat_id, message, reply_markup=None):
     data = {
         "chat_id": chat_id,
         "text": message,
         "parse_mode": "HTML",
-        "reply_markup": reply_markup,
         "disable_web_page_preview": True
     }
+    if reply_markup is not None:
+        data["reply_markup"] = reply_markup
     req = urllib.request.Request(
         f"https://api.telegram.org/bot{token}/sendMessage",
         data=json.dumps(data).encode("utf-8"),
@@ -109,16 +120,73 @@ def send_message(token, chat_id, message, reply_markup):
     )
     return send_request(req)
 
-def send_media_group(token, chat_id, filepaths):
+def edit_message(token, chat_id, message_id, text, reply_markup=None):
+    data = {
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "text": text,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True
+    }
+    if reply_markup is not None:
+        data["reply_markup"] = reply_markup
+    req = urllib.request.Request(
+        f"https://api.telegram.org/bot{token}/editMessageText",
+        data=json.dumps(data).encode("utf-8"),
+        headers={"Content-Type": "application/json"}
+    )
+    return send_request(req)
+
+def send_document(token, chat_id, filepath, caption=None):
     boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
     headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
-    
+
     body = []
     body.append(f"--{boundary}".encode('utf-8'))
     body.append(b'Content-Disposition: form-data; name="chat_id"')
     body.append(b'')
     body.append(str(chat_id).encode('utf-8'))
-    
+
+    if caption:
+        body.append(f"--{boundary}".encode('utf-8'))
+        body.append(b'Content-Disposition: form-data; name="caption"')
+        body.append(b'')
+        body.append(caption.encode('utf-8'))
+
+        body.append(f"--{boundary}".encode('utf-8'))
+        body.append(b'Content-Disposition: form-data; name="parse_mode"')
+        body.append(b'')
+        body.append(b'HTML')
+
+    filename = os.path.basename(filepath)
+    body.append(f"--{boundary}".encode('utf-8'))
+    body.append(f'Content-Disposition: form-data; name="document"; filename="{filename}"'.encode('utf-8'))
+    body.append(b'Content-Type: application/octet-stream')
+    body.append(b'')
+    with open(filepath, 'rb') as f:
+        body.append(f.read())
+
+    body.append(f"--{boundary}--".encode('utf-8'))
+    body.append(b'')
+
+    payload = b'\r\n'.join(body)
+    req = urllib.request.Request(
+        f"https://api.telegram.org/bot{token}/sendDocument",
+        data=payload,
+        headers=headers
+    )
+    return send_request(req)
+
+def send_media_group(token, chat_id, filepaths):
+    boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
+    headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
+
+    body = []
+    body.append(f"--{boundary}".encode('utf-8'))
+    body.append(b'Content-Disposition: form-data; name="chat_id"')
+    body.append(b'')
+    body.append(str(chat_id).encode('utf-8'))
+
     media_list = []
     for i, filepath in enumerate(filepaths):
         attach_name = f"doc_{i}"
@@ -126,12 +194,12 @@ def send_media_group(token, chat_id, filepaths):
             "type": "document",
             "media": f"attach://{attach_name}"
         })
-        
+
     body.append(f"--{boundary}".encode('utf-8'))
     body.append(b'Content-Disposition: form-data; name="media"')
     body.append(b'')
     body.append(json.dumps(media_list).encode('utf-8'))
-    
+
     for i, filepath in enumerate(filepaths):
         attach_name = f"doc_{i}"
         filename = os.path.basename(filepath)
@@ -141,10 +209,10 @@ def send_media_group(token, chat_id, filepaths):
         body.append(b'')
         with open(filepath, 'rb') as f:
             body.append(f.read())
-            
+
     body.append(f"--{boundary}--".encode('utf-8'))
     body.append(b'')
-    
+
     payload = b'\r\n'.join(body)
     req = urllib.request.Request(
         f"https://api.telegram.org/bot{token}/sendMediaGroup",
@@ -153,7 +221,260 @@ def send_media_group(token, chat_id, filepaths):
     )
     return send_request(req)
 
-def main():
+
+# ═══════════════════════════════════════════════════════════════════
+# Monitor — Live build progress via Telegram
+# ═══════════════════════════════════════════════════════════════════
+
+def format_time(seconds):
+    """Format seconds as XXm:XXs or XXh:XXm:XXs."""
+    h = int(seconds) // 3600
+    m = (int(seconds) % 3600) // 60
+    s = int(seconds) % 60
+    if h > 0:
+        return f"{h:02d}h:{m:02d}m:{s:02d}s"
+    return f"{m:02d}m:{s:02d}s"
+
+def format_duration_text(seconds):
+    """Format seconds as human-readable text like '2 minutes and 12 seconds'."""
+    h = int(seconds) // 3600
+    m = (int(seconds) % 3600) // 60
+    s = int(seconds) % 60
+    if h > 0:
+        return f"{h} {'hour' if h == 1 else 'hours'} and {m} {'minute' if m == 1 else 'minutes'}"
+    if m > 0:
+        return f"{m} {'minute' if m == 1 else 'minutes'} and {s} {'second' if s == 1 else 'seconds'}"
+    return f"{s} {'second' if s == 1 else 'seconds'}"
+
+def format_size(size_bytes):
+    """Format file size to human-readable."""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    if size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    if size_bytes < 1024 ** 3:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    return f"{size_bytes / (1024 ** 3):.2f} GB"
+
+def count_dry_run_tasks():
+    """Run Gradle --dry-run to auto-detect total task count."""
+    try:
+        result = subprocess.run(
+            ['./gradlew', 'assembleRelease', '--dry-run'],
+            capture_output=True, text=True, timeout=120
+        )
+        count = sum(1 for line in result.stdout.splitlines()
+                    if line.strip().startswith('> Task '))
+        if count == 0:
+            # Fallback: count old-style `:task SKIPPED` format
+            count = sum(1 for line in result.stdout.splitlines()
+                        if line.strip().startswith(':') and 'SKIPPED' in line)
+        return count if count > 0 else 50
+    except Exception as e:
+        print(f"Warning: dry-run failed ({e}), using estimate of 50 tasks")
+        return 50
+
+def monitor():
+    """Live build monitor with Telegram progress updates."""
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    version = os.environ.get("VERSION", "unknown")
+    app_name = os.environ.get("APP_NAME", "CQ")
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    run_id = os.environ.get("GITHUB_RUN_ID", "")
+    server_url = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
+    ref_name = os.environ.get("GITHUB_REF_NAME", "unknown")
+
+    # Get commit hash
+    try:
+        commit_hash = subprocess.check_output(
+            ['git', 'rev-parse', '--short', 'HEAD'], text=True
+        ).strip()
+    except Exception:
+        commit_hash = "unknown"
+
+    action_url = f"{server_url}/{repo}/actions/runs/{run_id}"
+    release_url = f"https://github.com/{repo}/releases/tag/v{version}"
+    telegram_ok = bool(token and chat_id)
+    message_id = None
+
+    # ── Phase 1: Dry-run to count tasks ──
+    print("Analyzing build tasks...")
+    total_tasks = count_dry_run_tasks()
+    print(f"Detected {total_tasks} tasks")
+
+    # Helper variables for tracking progress
+    completed = 0
+    current_task = "Setup JDK 21"
+    failed_task = None
+    start_time = time.time()
+    lock = threading.Lock()
+    running = True
+
+    def make_progress_msg():
+        with lock:
+            c, ct = completed, current_task
+        elapsed = time.time() - start_time
+        pct = min(int(c / total_tasks * 100), 99) if total_tasks > 0 else 0
+        text = (
+            f"<b>Building APK...</b>\n\n"
+            f"• APP: <code>{escape_html(app_name)}</code>\n"
+            f"• VERSION: <code>v{escape_html(version)}</code>\n"
+            f"• BRANCH: <code>{escape_html(ref_name)}</code>\n"
+            f"• PROGRESS: <code>{pct}% ({c}/{total_tasks})</code>\n"
+            f"• ELAPSED TIME: <code>{format_time(elapsed)}</code>\n"
+            f"• STAGE:\n<blockquote>{escape_html(ct)}</blockquote>"
+        )
+        return text
+
+    # ── Phase 2: Send initial message and pre-build setup logs ──
+    if telegram_ok:
+        try:
+            resp = send_message(token, chat_id, make_progress_msg())
+            data = json.loads(resp)
+            message_id = data['result']['message_id']
+            print(f"Telegram: Initial message sent (id: {message_id})")
+        except Exception as e:
+            print(f"Warning: Failed to send initial message: {e}")
+            telegram_ok = False
+
+        if telegram_ok and message_id:
+            # Update to Write sign info
+            time.sleep(1.5)
+            with lock:
+                current_task = "Write sign info"
+            try:
+                edit_message(token, chat_id, message_id, make_progress_msg())
+            except Exception:
+                pass
+
+            # Update to Set version name
+            time.sleep(1.5)
+            with lock:
+                current_task = "Set version name"
+            try:
+                edit_message(token, chat_id, message_id, make_progress_msg())
+            except Exception:
+                pass
+
+            # Reset task state to compile phase
+            with lock:
+                current_task = "starting..."
+
+    # ── Phase 3: Build with live progress ──
+    def update_loop():
+        last_text = ""
+        while running:
+            time.sleep(3)
+            if not running:
+                break
+            if telegram_ok and message_id:
+                try:
+                    text = make_progress_msg()
+                    if text != last_text:
+                        edit_message(token, chat_id, message_id, text)
+                        last_text = text
+                except Exception:
+                    pass
+
+    thread = threading.Thread(target=update_loop, daemon=True)
+    thread.start()
+
+    log_file = open('build_log.txt', 'w')
+    task_re = re.compile(r'^> Task (\S+)')
+    fail_re = re.compile(r'^> Task (\S+)\s+FAILED')
+
+    process = subprocess.Popen(
+        ['./gradlew', 'assembleRelease'],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, bufsize=1
+    )
+
+    for line in iter(process.stdout.readline, ''):
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        log_file.write(line)
+
+        stripped = line.strip()
+        fm = fail_re.match(stripped)
+        if fm:
+            with lock:
+                failed_task = fm.group(1)
+                completed += 1
+                current_task = fm.group(1)
+        else:
+            tm = task_re.match(stripped)
+            if tm:
+                with lock:
+                    completed += 1
+                    current_task = tm.group(1)
+
+    process.wait()
+    exit_code = process.returncode
+    log_file.close()
+    running = False
+    thread.join(timeout=5)
+
+    elapsed = time.time() - start_time
+
+    # ── Phase 4: Final message ──
+    if telegram_ok and message_id:
+        if exit_code == 0:
+            # Build succeeded
+            text = (
+                f"<b>APK compiled!</b>\n\n"
+                f"• APP: <code>{escape_html(app_name)}</code>\n"
+                f"• VERSION: <code>v{escape_html(version)}</code>\n"
+                f"• BUILD TIME: <code>{format_time(elapsed)}</code>\n"
+                f"• TASKS: <code>{completed} executed</code>\n\n"
+                f"<i>Compilation took {format_duration_text(elapsed)}</i>"
+            )
+            markup = {"inline_keyboard": [[
+                {"text": "Action", "url": action_url},
+                {"text": "Releases", "url": release_url}
+            ]]}
+            try:
+                edit_message(token, chat_id, message_id, text, markup)
+                print("Telegram: Success message sent")
+            except Exception as e:
+                print(f"Warning: Failed to edit success message: {e}")
+        else:
+            # Build failed
+            ft = failed_task or current_task or "unknown"
+            text = (
+                f"<b>Build failed!</b>\n\n"
+                f"• APP: <code>{escape_html(app_name)}</code>\n"
+                f"• VERSION: <code>v{escape_html(version)}</code>\n"
+                f"• FAILED AT: <code>{escape_html(ft)}</code>\n"
+                f"• ELAPSED TIME: <code>{format_time(elapsed)}</code>\n"
+                f"• TASKS: <code>{completed}/{total_tasks} completed</code>"
+            )
+            markup = {"inline_keyboard": [[
+                {"text": "Action", "url": action_url}
+            ]]}
+            try:
+                edit_message(token, chat_id, message_id, text, markup)
+                print("Telegram: Failure message sent")
+            except Exception as e:
+                print(f"Warning: Failed to edit failure message: {e}")
+
+            # Upload build log
+            if os.path.exists('build_log.txt'):
+                try:
+                    send_document(token, chat_id, 'build_log.txt',
+                                  caption=f"Build log for v{version}")
+                    print("Telegram: Build log sent")
+                except Exception as e:
+                    print(f"Warning: Failed to send build log: {e}")
+
+    sys.exit(exit_code)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Release — Post-build notification (existing functionality)
+# ═══════════════════════════════════════════════════════════════════
+
+def release():
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     version = os.environ.get("VERSION")
@@ -197,7 +518,7 @@ def main():
     if os.path.exists(banner_path):
         photo_caption = message
         send_separate_changelog = False
-        
+
         if len(message) > 1024:
             photo_caption = (
                 f"<b>New update available (v{version})</b>\n\n"
@@ -248,6 +569,25 @@ def main():
             print("Successfully sent combined media group.")
         except Exception as e:
             print(f"Error sending media group: {e}")
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Entry Point
+# ═══════════════════════════════════════════════════════════════════
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: bot.py <monitor|release>")
+        sys.exit(1)
+
+    cmd = sys.argv[1]
+    if cmd == "monitor":
+        monitor()
+    elif cmd == "release":
+        release()
+    else:
+        print(f"Unknown command: {cmd}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
