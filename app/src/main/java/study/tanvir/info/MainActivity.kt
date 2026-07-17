@@ -68,7 +68,16 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (!isGranted) {
-            Toast.makeText(this, "Notification permission denied. Download status won't be shown.", Toast.LENGTH_LONG).show()
+            val message = "Notification permission denied\nDownload status won't be shown"
+            val spannable = android.text.SpannableString(message).apply {
+                setSpan(
+                    android.text.style.AlignmentSpan.Standard(android.text.Layout.Alignment.ALIGN_CENTER),
+                    0,
+                    length,
+                    android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+            Toast.makeText(this, spannable, Toast.LENGTH_LONG).show()
         }
     }
 
