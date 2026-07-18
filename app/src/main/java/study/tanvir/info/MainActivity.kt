@@ -143,10 +143,6 @@ class MainActivity : AppCompatActivity() {
         setupLockScreen()
         checkPostUpdateToast()
         checkFirstLaunchPermissions()
-
-        if (isNetworkAvailable()) {
-            UpdateChecker.checkForUpdates(this)
-        }
     }
 
     override fun onResume() {
@@ -563,25 +559,35 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // If notification permission already granted or below Android 13, go straight to OTA
+        // If notification permission already granted or below Android 13
         if (!alreadyPrompted) {
             showOtaPermissionPopup()
+        } else {
+            // Already prompted before, check for updates directly
+            checkForUpdatesIfNeeded()
         }
     }
 
     private fun showOtaPermissionPopup() {
         val prefs = getSharedPreferences("update_prefs", MODE_PRIVATE)
-        if (prefs.getBoolean("ota_permission_prompted", false)) return
+        if (prefs.getBoolean("ota_permission_prompted", false)) {
+            checkForUpdatesIfNeeded()
+            return
+        }
 
         // Mark as prompted so we never show this again
         prefs.edit().putBoolean("ota_permission_prompted", true).apply()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (packageManager.canRequestPackageInstalls()) return
+            if (packageManager.canRequestPackageInstalls()) {
+                checkForUpdatesIfNeeded()
+                return
+            }
 
             MaterialAlertDialogBuilder(this)
                 .setTitle("Enable OTA Updates")
                 .setMessage("This app supports OTA updates. Please allow permission to install unknown apps to safely apply updates")
+                .setCancelable(false)
                 .setPositiveButton("Allow") { d, _ ->
                     try {
                         val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
@@ -590,9 +596,21 @@ class MainActivity : AppCompatActivity() {
                         startActivity(intent)
                     } catch (_: Exception) { }
                     d.dismiss()
+                    checkForUpdatesIfNeeded()
                 }
-                .setNegativeButton("Later") { d, _ -> d.dismiss() }
+                .setNegativeButton("Later") { d, _ ->
+                    d.dismiss()
+                    checkForUpdatesIfNeeded()
+                }
                 .show()
+        } else {
+            checkForUpdatesIfNeeded()
+        }
+    }
+
+    private fun checkForUpdatesIfNeeded() {
+        if (isNetworkAvailable()) {
+            UpdateChecker.checkForUpdates(this)
         }
     }
 
