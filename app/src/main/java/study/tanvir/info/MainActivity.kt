@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -40,6 +41,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import study.tanvir.info.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -80,6 +82,8 @@ class MainActivity : AppCompatActivity() {
             }
             Toast.makeText(this, spannable, Toast.LENGTH_LONG).show()
         }
+        // Chain into OTA permission prompt after notification permission is handled
+        showOtaPermissionPopup()
     }
 
     companion object {
@@ -137,7 +141,8 @@ class MainActivity : AppCompatActivity() {
         setupOfflineRetry()
         setupSwipeToRefresh()
         setupLockScreen()
-        checkNotificationPermission()
+        checkPostUpdateToast()
+        checkFirstLaunchPermissions()
 
         if (isNetworkAvailable()) {
             UpdateChecker.checkForUpdates(this)
@@ -545,12 +550,60 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkNotificationPermission() {
+    private fun checkFirstLaunchPermissions() {
+        val prefs = getSharedPreferences("update_prefs", MODE_PRIVATE)
+        val alreadyPrompted = prefs.getBoolean("ota_permission_prompted", false)
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val permission = "android.permission.POST_NOTIFICATIONS"
             if (ContextCompat.checkSelfPermission(this, permission) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                // Notification result callback will chain into showOtaPermissionPopup
                 requestNotificationPermissionLauncher.launch(permission)
+                return
             }
         }
+
+        // If notification permission already granted or below Android 13, go straight to OTA
+        if (!alreadyPrompted) {
+            showOtaPermissionPopup()
+        }
+    }
+
+    private fun showOtaPermissionPopup() {
+        val prefs = getSharedPreferences("update_prefs", MODE_PRIVATE)
+        if (prefs.getBoolean("ota_permission_prompted", false)) return
+
+        // Mark as prompted so we never show this again
+        prefs.edit().putBoolean("ota_permission_prompted", true).apply()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (packageManager.canRequestPackageInstalls()) return
+
+            MaterialAlertDialogBuilder(this)
+                .setTitle("Enable OTA Updates")
+                .setMessage("This app supports OTA updates. Please allow permission to install unknown apps to safely apply updates")
+                .setPositiveButton("Allow") { d, _ ->
+                    try {
+                        val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                            data = Uri.parse("package:$packageName")
+                        }
+                        startActivity(intent)
+                    } catch (_: Exception) { }
+                    d.dismiss()
+                }
+                .setNegativeButton("Later") { d, _ -> d.dismiss() }
+                .show()
+        }
+    }
+
+    private fun checkPostUpdateToast() {
+        val prefs = getSharedPreferences("update_prefs", MODE_PRIVATE)
+        val pendingVersion = prefs.getString("pending_update_version", null) ?: return
+
+        // Clear the flag immediately
+        prefs.edit().remove("pending_update_version").apply()
+
+        Toast.makeText(this, "Successfully updated to $pendingVersion", Toast.LENGTH_LONG).show()
     }
 }
+

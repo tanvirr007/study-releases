@@ -320,7 +320,8 @@ object UpdateChecker {
                 positiveButton = positiveButton,
                 negativeButton = negativeButton,
                 dialog = dialog,
-                remoteVersionCode = remoteVersionCode
+                remoteVersionCode = remoteVersionCode,
+                versionName = versionName
             )
         }
     }
@@ -334,12 +335,16 @@ object UpdateChecker {
         positiveButton: Button,
         negativeButton: Button,
         dialog: AlertDialog,
-        remoteVersionCode: Long
+        remoteVersionCode: Long,
+        versionName: String
     ) {
         val activityRef = WeakReference(activity)
-        positiveButton.isEnabled = false
-        positiveButton.text = "Downloading..."
-        negativeButton.isEnabled = false
+
+        // State 1: Downloading — hide changelog, hide buttons, show progress
+        dialog.setTitle("Downloading")
+        messageView.visibility = View.GONE
+        positiveButton.visibility = View.GONE
+        negativeButton.visibility = View.GONE
         progressBar.visibility = View.VISIBLE
         progressBar.progress = 0
         progressTextView.visibility = View.VISIBLE
@@ -401,19 +406,25 @@ object UpdateChecker {
                 }
                 outputStream.flush()
 
-                // Complete installation if activity is active
+                // State 3: Download complete — show Ready to install
                 Handler(Looper.getMainLooper()).post {
                     val finalAct = activityRef.get()
                     if (finalAct == null || finalAct.isFinishing || finalAct.isDestroyed) return@post
 
+                    dialog.setTitle("Ready to install")
                     progressBar.visibility = View.GONE
                     progressTextView.visibility = View.GONE
-                    messageView.text = "You must restart the app to apply the updates. Tap Restart to install and relaunch."
+                    messageView.text = "Click on Restart button to apply the update"
+                    messageView.visibility = View.VISIBLE
 
-                    positiveButton.isEnabled = true
                     positiveButton.text = "Restart"
+                    positiveButton.visibility = View.VISIBLE
 
                     positiveButton.setOnClickListener {
+                        // Save version name so MainActivity can show success toast on relaunch
+                        val prefs = finalAct.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                        prefs.edit().putString("pending_update_version", versionName).apply()
+
                         installApk(finalAct, apkFile)
                         dialog.dismiss()
                     }
@@ -421,15 +432,35 @@ object UpdateChecker {
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error downloading update APK", e)
+
+                // State 2: Download failed — show error and Retry
                 Handler(Looper.getMainLooper()).post {
                     val errorAct = activityRef.get()
                     if (errorAct == null || errorAct.isFinishing || errorAct.isDestroyed) return@post
 
-                    positiveButton.isEnabled = true
-                    positiveButton.text = "Retry"
-                    negativeButton.isEnabled = true
+                    dialog.setTitle("Download Failed")
                     progressBar.visibility = View.GONE
-                    progressTextView.text = "Download failed: ${e.localizedMessage}"
+                    progressTextView.visibility = View.GONE
+                    messageView.text = "The connection was lost or the download failed"
+                    messageView.visibility = View.VISIBLE
+
+                    positiveButton.text = "Retry"
+                    positiveButton.visibility = View.VISIBLE
+
+                    positiveButton.setOnClickListener {
+                        downloadApk(
+                            activity = errorAct,
+                            downloadUrl = downloadUrl,
+                            progressBar = progressBar,
+                            progressTextView = progressTextView,
+                            messageView = messageView,
+                            positiveButton = positiveButton,
+                            negativeButton = negativeButton,
+                            dialog = dialog,
+                            remoteVersionCode = remoteVersionCode,
+                            versionName = versionName
+                        )
+                    }
                 }
             } finally {
                 try {
