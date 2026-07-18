@@ -33,6 +33,7 @@ import android.widget.Toast
 import androidx.core.view.WindowInsetsControllerCompat
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.net.Uri
 import android.webkit.ValueCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -155,6 +156,32 @@ class MainActivity : AppCompatActivity() {
         super.onStop()
         backgroundedAt = System.currentTimeMillis()
         android.webkit.CookieManager.getInstance().flush()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleDeepLink(intent)
+    }
+
+    private fun handleDeepLink(intent: Intent?) {
+        val data: Uri? = intent?.data
+        if (data != null) {
+            val scheme = data.scheme
+            val host = data.host
+            val path = data.path ?: ""
+            val query = data.query?.let { "?$it" } ?: ""
+            val fragment = data.fragment?.let { "#$it" } ?: ""
+
+            if (scheme == "cq") {
+                val webUrl = "$WEB_URL$path$query$fragment"
+                binding.webView.loadUrl(webUrl)
+            } else if (scheme == "http" || scheme == "https") {
+                if (host == "study-tanvirr007.vercel.app" || host == "www.study-tanvirr007.vercel.app") {
+                    binding.webView.loadUrl(data.toString())
+                }
+            }
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -291,7 +318,20 @@ class MainActivity : AppCompatActivity() {
     private fun startInitialLoadIfNeeded() {
         if (!isInitialLoadStarted) {
             isInitialLoadStarted = true
-            binding.webView.loadUrl(WEB_URL)
+            val deepLinkUrl = intent?.data?.toString()
+            val host = intent?.data?.host
+            val scheme = intent?.data?.scheme
+            
+            if (scheme == "cq") {
+                val path = intent?.data?.path ?: ""
+                val query = intent?.data?.query?.let { "?$it" } ?: ""
+                val fragment = intent?.data?.fragment?.let { "#$it" } ?: ""
+                binding.webView.loadUrl("$WEB_URL$path$query$fragment")
+            } else if (deepLinkUrl != null && (host == "study-tanvirr007.vercel.app" || host == "www.study-tanvirr007.vercel.app")) {
+                binding.webView.loadUrl(deepLinkUrl)
+            } else {
+                binding.webView.loadUrl(WEB_URL)
+            }
         }
     }
 
