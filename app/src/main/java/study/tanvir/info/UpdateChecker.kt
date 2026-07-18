@@ -7,6 +7,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.graphics.Typeface
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.StyleSpan
 import android.util.Log
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.json.JSONObject
@@ -136,8 +140,8 @@ object UpdateChecker {
         // Clean up Markdown formatting to make it clean text for standard Android TextViews
         return rawText
             .replace(Regex("\\*\\*"), "") // Remove bold indicators
-            .replace(Regex("\\*\\s+"), "• ") // Convert * bullets to standard round bullets
-            .replace(Regex("(?m)^\\s*\\*\\s+"), "  - ") // Convert sub-bullets (nested asterisks)
+            .replace(Regex("(?m)^\\s+\\*\\s+"), "  - ") // Convert sub-bullets (nested asterisks) to dashes
+            .replace(Regex("\\*\\s+"), "• ") // Convert main bullets to standard round bullets
             .replace(Regex("`"), "") // Remove code block ticks
             .trim()
     }
@@ -148,9 +152,21 @@ object UpdateChecker {
         changelog: String,
         downloadUrl: String
     ) {
+        val messageText = "A new version ($versionName) of the app is available\n\nWhat's New:\n$changelog"
+        val spannableMessage = SpannableStringBuilder(messageText)
+        val boldStart = messageText.indexOf("What's New:")
+        if (boldStart != -1) {
+            spannableMessage.setSpan(
+                StyleSpan(Typeface.BOLD),
+                boldStart,
+                boldStart + "What's New:".length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+
         MaterialAlertDialogBuilder(activity)
             .setTitle("Update Available")
-            .setMessage("A new version ($versionName) of the app is available.\n\nWhat's New:\n$changelog")
+            .setMessage(spannableMessage)
             .setCancelable(false)
             .setPositiveButton("Update Now") { dialog, _ ->
                 try {
