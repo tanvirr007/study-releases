@@ -1,6 +1,6 @@
 {
-  "versionCode": 66,
-  "versionName": "v4.5.66",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.66/CQ.apk",
-  "changelog": "* **fix: splash & ota bg ui** (d86fb0c)\n  - Set white background on activity layout to fix black background artifact.\n  - Pre-load web app in background during initial startup.\n  - Dismiss splash screen immediately after permissions flow completes.\n"
+  "versionCode": 67,
+  "versionName": "v4.5.67",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.67/CQ.apk",
+  "changelog": "* **fix: check updates shortcut** (a6ea57b)\n  • Track active update dialog to dismiss stale ones on manual check\n  • Add AtomicBoolean guard to prevent concurrent check collisions\n  • Consume shortcut intent data and fix WebView deep link fallback\n"
 }
