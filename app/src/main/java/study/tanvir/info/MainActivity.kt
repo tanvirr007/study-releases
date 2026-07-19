@@ -115,13 +115,13 @@ class MainActivity : AppCompatActivity() {
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition { shouldKeepSplashScreen }
 
-        // Safety fallback: Never keep splash screen for more than 8 seconds under any circumstances
+        // Safety fallback: Never keep splash screen for more than 2.5 seconds under any circumstances
         Handler(Looper.getMainLooper()).postDelayed({
             if (shouldKeepSplashScreen) {
                 shouldKeepSplashScreen = false
                 isWebViewFirstPageLoaded = true
             }
-        }, 8000)
+        }, 2500)
 
         // Apply FLAG_SECURE window flag based on user preferences
         val prefs = getSharedPreferences("security_prefs", MODE_PRIVATE)
@@ -137,6 +137,9 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Initialize white background theme immediately so dialogs appear over clean white
+        updateSystemBarTheme(WEB_URL)
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -151,6 +154,7 @@ class MainActivity : AppCompatActivity() {
         setupLockScreen()
         checkPostUpdateToast()
         handleDeepLink(intent)
+        startInitialLoadIfNeeded()
     }
 
     override fun onResume() {
@@ -629,6 +633,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun onPermissionsFlowCompleted() {
         isPermissionsFlowCompleted = true
+        shouldKeepSplashScreen = false
+        isWebViewFirstPageLoaded = true
         checkForUpdatesIfNeeded()
         startInitialLoadIfNeeded()
     }
