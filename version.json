@@ -1,6 +1,6 @@
 {
-  "versionCode": 1,
-  "versionName": "v1.0.1",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v1.0.1/CQ.apk",
-  "changelog": "No changelog provided."
+  "versionCode": 60,
+  "versionName": "v3.5.60",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v3.5.60/CQ.apk",
+  "changelog": "* **feat: add raw GitHub CDN OTA update checking system** (d0b4112)\n  - Use raw.githubusercontent.com version.json for instant, un-rate-limited update checks\n  - Remove 4-hour caching interval so updates trigger immediately on launch\n  - Trigger version check early in MainActivity onCreate\n  - Add bot.py ota subcommand to generate version.json automatically\n  - Update build_apk.yml workflow to auto-commit version.json on release\n"
 }
