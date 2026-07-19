@@ -1,6 +1,6 @@
 {
-  "versionCode": 64,
-  "versionName": "v4.5.64",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.64/CQ.apk",
-  "changelog": "* **bump app version to 4.5** (cc17091)\n  - Bump app versionName from 3.5 to 4.5 in build.gradle.kts\n  - Update versionName and download URL in version.json\n"
+  "versionCode": 65,
+  "versionName": "v4.5.65",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.65/CQ.apk",
+  "changelog": "* **fix: white screen on launch** (a45ab20)\n  - Fix white screen during fresh install permission flow\n  - Defer webview loading until returning from Settings\n  - Add WebView lifecycle onResume/onPause calls\n  - Add 8-second splash screen safety fallback timeout\n"
 }
