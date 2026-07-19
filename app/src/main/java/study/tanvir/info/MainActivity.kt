@@ -115,6 +115,14 @@ class MainActivity : AppCompatActivity() {
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition { shouldKeepSplashScreen }
 
+        // Safety fallback: Never keep splash screen for more than 8 seconds under any circumstances
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (shouldKeepSplashScreen) {
+                shouldKeepSplashScreen = false
+                isWebViewFirstPageLoaded = true
+            }
+        }, 8000)
+
         // Apply FLAG_SECURE window flag based on user preferences
         val prefs = getSharedPreferences("security_prefs", MODE_PRIVATE)
         val flagSecureDisabled = prefs.getBoolean("flag_secure_disabled", false)
@@ -147,10 +155,19 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        binding.webView.onResume()
         checkBiometricLock()
         if (isWebViewFirstPageLoaded) {
             binding.webView.evaluateJavascript("window.dispatchEvent(new Event('focus'));", null)
         }
+        if (isPermissionsFlowCompleted && !isWebViewFirstPageLoaded && binding.webView.url.isNullOrEmpty()) {
+            startInitialLoadIfNeeded()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        binding.webView.onPause()
     }
 
     override fun onStop() {
@@ -321,7 +338,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startInitialLoadIfNeeded() {
-        if (!isInitialLoadStarted) {
+        if (!isInitialLoadStarted || binding.webView.url.isNullOrEmpty()) {
             isInitialLoadStarted = true
             val deepLinkUrl = intent?.data?.toString()
             val host = intent?.data?.host
@@ -552,8 +569,14 @@ class MainActivity : AppCompatActivity() {
 
     private var isPermissionsFlowStarted = false
     private var isPermissionsFlowCompleted = false
+    private var isWaitingForOtaSettingsReturn = false
 
     private fun checkFirstLaunchPermissions() {
+        if (isWaitingForOtaSettingsReturn) {
+            isWaitingForOtaSettingsReturn = false
+            onPermissionsFlowCompleted()
+            return
+        }
         if (isPermissionsFlowStarted || isPermissionsFlowCompleted) return
         isPermissionsFlowStarted = true
 
@@ -582,14 +605,17 @@ class MainActivity : AppCompatActivity() {
                 .setMessage("• This app supports OTA updates\n• Allow permission to install updates")
                 .setCancelable(false)
                 .setPositiveButton("Allow") { d, _ ->
+                    d.dismiss()
+                    isWaitingForOtaSettingsReturn = true
                     try {
                         val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
                             data = Uri.parse("package:$packageName")
                         }
                         startActivity(intent)
-                    } catch (_: Exception) { }
-                    d.dismiss()
-                    onPermissionsFlowCompleted()
+                    } catch (_: Exception) {
+                        isWaitingForOtaSettingsReturn = false
+                        onPermissionsFlowCompleted()
+                    }
                 }
                 .setNegativeButton("Later") { d, _ ->
                     d.dismiss()
