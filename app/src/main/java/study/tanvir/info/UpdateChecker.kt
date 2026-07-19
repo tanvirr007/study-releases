@@ -414,7 +414,7 @@ object UpdateChecker {
                     dialog.setTitle("Ready to install")
                     progressBar.visibility = View.GONE
                     progressTextView.visibility = View.GONE
-                    messageView.text = "Click on Restart button to apply the update"
+                    messageView.text = "• Tap restart to install the update"
                     messageView.visibility = View.VISIBLE
 
                     positiveButton.text = "Restart"
