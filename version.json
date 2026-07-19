@@ -1,6 +1,6 @@
 {
-  "versionCode": 61,
-  "versionName": "v3.5.61",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v3.5.61/CQ.apk",
-  "changelog": "* **fix: display update dialog after biometrics and permissions complete** (e6525bf)\n  - Remove checkForUpdatesIfNeeded from onCreate to prevent dialog from being obscured by lock overlay\n  - Execute update check in onPermissionsFlowCompleted so dialog stays on the top layer\n* **update: raw CDN version.json v3.5.60** (9b1ed22)\n"
+  "versionCode": 62,
+  "versionName": "v3.5.62",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v3.5.62/CQ.apk",
+  "changelog": "* **ci: update automated OTA commit message style and add Change-Id** (8653632)\n  - Format automated workflow commit title as release: OTA manifest v...\n  - Include Signed-off-by flag and auto-generated Change-Id in workflow commits\n* **update: raw CDN version.json v3.5.61** (2885b95)\n"
 }
