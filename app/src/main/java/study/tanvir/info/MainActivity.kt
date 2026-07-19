@@ -142,7 +142,6 @@ class MainActivity : AppCompatActivity() {
         setupSwipeToRefresh()
         setupLockScreen()
         checkPostUpdateToast()
-        checkFirstLaunchPermissions()
     }
 
     override fun onResume() {
@@ -476,14 +475,14 @@ class MainActivity : AppCompatActivity() {
 
         if (!biometricEnabled) {
             isAuthenticated = false
-            startInitialLoadIfNeeded()
+            checkFirstLaunchPermissions()
             return
         }
 
         // Grace period: skip lock if away less than 30 seconds and already authenticated
         val timeAway = System.currentTimeMillis() - backgroundedAt
         if (isAuthenticated && backgroundedAt != 0L && timeAway < 30_000) {
-            startInitialLoadIfNeeded()
+            checkFirstLaunchPermissions()
             return
         }
 
@@ -509,7 +508,7 @@ class MainActivity : AppCompatActivity() {
                 binding.lockOverlay.visibility = View.GONE
                 // Restore system bar theme based on current web page URL
                 updateSystemBarTheme(binding.webView.url ?: WEB_URL)
-                startInitialLoadIfNeeded()
+                checkFirstLaunchPermissions()
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
@@ -541,7 +540,7 @@ class MainActivity : AppCompatActivity() {
             isAuthenticated = true
             binding.lockOverlay.visibility = View.GONE
             updateSystemBarTheme(binding.webView.url ?: WEB_URL)
-            startInitialLoadIfNeeded()
+            checkFirstLaunchPermissions()
             shouldKeepSplashScreen = false
         }
     }
@@ -563,15 +562,15 @@ class MainActivity : AppCompatActivity() {
         if (!alreadyPrompted) {
             showOtaPermissionPopup()
         } else {
-            // Already prompted before, check for updates directly
-            checkForUpdatesIfNeeded()
+            // Already prompted before, proceed to app load and update check directly
+            onPermissionsFlowCompleted()
         }
     }
 
     private fun showOtaPermissionPopup() {
         val prefs = getSharedPreferences("update_prefs", MODE_PRIVATE)
         if (prefs.getBoolean("ota_permission_prompted", false)) {
-            checkForUpdatesIfNeeded()
+            onPermissionsFlowCompleted()
             return
         }
 
@@ -580,7 +579,7 @@ class MainActivity : AppCompatActivity() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (packageManager.canRequestPackageInstalls()) {
-                checkForUpdatesIfNeeded()
+                onPermissionsFlowCompleted()
                 return
             }
 
@@ -596,16 +595,21 @@ class MainActivity : AppCompatActivity() {
                         startActivity(intent)
                     } catch (_: Exception) { }
                     d.dismiss()
-                    checkForUpdatesIfNeeded()
+                    onPermissionsFlowCompleted()
                 }
                 .setNegativeButton("Later") { d, _ ->
                     d.dismiss()
-                    checkForUpdatesIfNeeded()
+                    onPermissionsFlowCompleted()
                 }
                 .show()
         } else {
-            checkForUpdatesIfNeeded()
+            onPermissionsFlowCompleted()
         }
+    }
+
+    private fun onPermissionsFlowCompleted() {
+        checkForUpdatesIfNeeded()
+        startInitialLoadIfNeeded()
     }
 
     private fun checkForUpdatesIfNeeded() {
