@@ -586,7 +586,7 @@ class MainActivity : AppCompatActivity() {
 
             MaterialAlertDialogBuilder(this)
                 .setTitle("Enable OTA Updates")
-                .setMessage("This app supports OTA updates. Please allow permission to install unknown apps to safely apply updates")
+                .setMessage("• This app supports OTA updates.\n• Please allow permission to install unknown apps to safely apply updates")
                 .setCancelable(false)
                 .setPositiveButton("Allow") { d, _ ->
                     try {
