@@ -1,6 +1,6 @@
 {
-  "versionCode": 60,
-  "versionName": "v3.5.60",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v3.5.60/CQ.apk",
-  "changelog": "* **feat: add raw GitHub CDN OTA update checking system** (d0b4112)\n  - Use raw.githubusercontent.com version.json for instant, un-rate-limited update checks\n  - Remove 4-hour caching interval so updates trigger immediately on launch\n  - Trigger version check early in MainActivity onCreate\n  - Add bot.py ota subcommand to generate version.json automatically\n  - Update build_apk.yml workflow to auto-commit version.json on release\n"
+  "versionCode": 61,
+  "versionName": "v3.5.61",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v3.5.61/CQ.apk",
+  "changelog": "* **fix: display update dialog after biometrics and permissions complete** (e6525bf)\n  - Remove checkForUpdatesIfNeeded from onCreate to prevent dialog from being obscured by lock overlay\n  - Execute update check in onPermissionsFlowCompleted so dialog stays on the top layer\n* **update: raw CDN version.json v3.5.60** (9b1ed22)\n"
 }
