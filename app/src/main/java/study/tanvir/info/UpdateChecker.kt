@@ -35,6 +35,7 @@ import java.io.InputStreamReader
 import java.lang.ref.WeakReference
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Locale
 import java.util.concurrent.Executors
 
 object UpdateChecker {
@@ -396,11 +397,13 @@ object UpdateChecker {
                             val progress = (total * 100 / fileLength).toInt()
                             progressBar.isIndeterminate = false
                             progressBar.progress = progress
-                            progressTextView.text = "Downloading: $progress%"
+                            val downloadedStr = formatBytes(total)
+                            val totalStr = formatBytes(fileLength.toLong())
+                            progressTextView.text = "Downloading: $progress% ($downloadedStr / $totalStr)"
                         } else {
                             progressBar.isIndeterminate = true
-                            val kb = total / 1024
-                            progressTextView.text = "Downloading: ${kb} KB"
+                            val downloadedStr = formatBytes(total)
+                            progressTextView.text = "Downloading: $downloadedStr"
                         }
                     }
                 }
@@ -530,6 +533,14 @@ object UpdateChecker {
             notificationManager.notify(999, builder.build())
         } catch (e: SecurityException) {
             Log.e(TAG, "Notification permission not granted", e)
+        }
+    }
+
+    private fun formatBytes(bytes: Long): String {
+        return when {
+            bytes >= 1024 * 1024 -> String.format(Locale.US, "%.1f MB", bytes.toDouble() / (1024 * 1024))
+            bytes >= 1024 -> String.format(Locale.US, "%.1f KB", bytes.toDouble() / 1024)
+            else -> "$bytes B"
         }
     }
 }
