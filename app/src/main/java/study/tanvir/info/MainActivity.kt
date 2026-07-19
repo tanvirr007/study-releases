@@ -545,7 +545,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var isPermissionsFlowStarted = false
+    private var isPermissionsFlowCompleted = false
+
     private fun checkFirstLaunchPermissions() {
+        if (isPermissionsFlowStarted || isPermissionsFlowCompleted) return
+        isPermissionsFlowStarted = true
+
         val prefs = getSharedPreferences("update_prefs", MODE_PRIVATE)
         val alreadyPrompted = prefs.getBoolean("ota_permission_prompted", false)
 
@@ -574,11 +580,9 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Mark as prompted so we never show this again
-        prefs.edit().putBoolean("ota_permission_prompted", true).apply()
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (packageManager.canRequestPackageInstalls()) {
+                prefs.edit().putBoolean("ota_permission_prompted", true).apply()
                 onPermissionsFlowCompleted()
                 return
             }
@@ -588,6 +592,7 @@ class MainActivity : AppCompatActivity() {
                 .setMessage("• This app supports OTA updates\n• Allow permission to install updates")
                 .setCancelable(false)
                 .setPositiveButton("Allow") { d, _ ->
+                    prefs.edit().putBoolean("ota_permission_prompted", true).apply()
                     try {
                         val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
                             data = Uri.parse("package:$packageName")
@@ -598,16 +603,19 @@ class MainActivity : AppCompatActivity() {
                     onPermissionsFlowCompleted()
                 }
                 .setNegativeButton("Later") { d, _ ->
+                    prefs.edit().putBoolean("ota_permission_prompted", true).apply()
                     d.dismiss()
                     onPermissionsFlowCompleted()
                 }
                 .show()
         } else {
+            prefs.edit().putBoolean("ota_permission_prompted", true).apply()
             onPermissionsFlowCompleted()
         }
     }
 
     private fun onPermissionsFlowCompleted() {
+        isPermissionsFlowCompleted = true
         checkForUpdatesIfNeeded()
         startInitialLoadIfNeeded()
     }
