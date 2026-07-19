@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">CQ</string>
+
+    <!-- Launcher Shortcuts -->
+    <string name="shortcut_telegram_short">Telegram</string>
+    <string name="shortcut_telegram_long">Telegram Channel</string>
+    <string name="shortcut_github_short">GitHub</string>
+    <string name="shortcut_github_long">GitHub Releases</string>
+    <string name="shortcut_update_short">Check Updates</string>
+    <string name="shortcut_update_long">Check for Updates</string>
 </resources>

@@ -142,6 +142,7 @@ class MainActivity : AppCompatActivity() {
         setupSwipeToRefresh()
         setupLockScreen()
         checkPostUpdateToast()
+        handleDeepLink(intent)
     }
 
     override fun onResume() {
@@ -174,8 +175,12 @@ class MainActivity : AppCompatActivity() {
             val fragment = data.fragment?.let { "#$it" } ?: ""
 
             if (scheme == "cq") {
-                val webUrl = "$WEB_URL$path$query$fragment"
-                binding.webView.loadUrl(webUrl)
+                if (host == "check-updates" || path.contains("check-updates")) {
+                    UpdateChecker.checkForUpdates(this, isManualCheck = true)
+                } else {
+                    val webUrl = "$WEB_URL$path$query$fragment"
+                    binding.webView.loadUrl(webUrl)
+                }
             } else if (scheme == "http" || scheme == "https") {
                 if (host == "study-tanvirr007.vercel.app" || host == "www.study-tanvirr007.vercel.app") {
                     binding.webView.loadUrl(data.toString())

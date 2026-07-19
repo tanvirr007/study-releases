@@ -49,7 +49,7 @@ object UpdateChecker {
     // Single static executor to reuse background threads
     private val updateExecutor = Executors.newSingleThreadExecutor()
 
-    fun checkForUpdates(activity: Activity) {
+    fun checkForUpdates(activity: Activity, isManualCheck: Boolean = false) {
         val activityRef = WeakReference(activity)
         val context = activity.applicationContext
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -57,14 +57,18 @@ object UpdateChecker {
         // Get local version code
         val localVersionCode = getLocalVersionCode(context)
 
-        // If not a local debug build (where versionCode is 1), enforce the 4-hour cache limit
-        if (localVersionCode != 1L) {
+        // Enforce 4-hour cache limit unless it's a local debug build or a manual user request
+        if (!isManualCheck && localVersionCode != 1L) {
             val lastCheckTime = prefs.getLong(KEY_LAST_CHECK_TIME, 0L)
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastCheckTime < CHECK_INTERVAL_MS) {
                 Log.d(TAG, "Update check skipped: 4h caching interval active")
                 return
             }
+        }
+
+        if (isManualCheck) {
+            Toast.makeText(context, "Checking for updates...", Toast.LENGTH_SHORT).show()
         }
 
         // Fetch latest release details asynchronously
@@ -88,12 +92,22 @@ object UpdateChecker {
                             response.append(line)
                         }
                     }
-                    parseAndProcessResponse(activityRef, context, response.toString(), localVersionCode)
+                    parseAndProcessResponse(activityRef, context, response.toString(), localVersionCode, isManualCheck)
                 } else {
                     Log.e(TAG, "Server returned response code: $responseCode")
+                    if (isManualCheck) {
+                        Handler(Looper.getMainLooper()).post {
+                            Toast.makeText(context, "Unable to check for updates (Server: $responseCode)", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to check for updates", e)
+                if (isManualCheck) {
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(context, "Failed to check for updates", Toast.LENGTH_SHORT).show()
+                    }
+                }
             } finally {
                 connection?.disconnect()
             }
@@ -119,7 +133,8 @@ object UpdateChecker {
         activityRef: WeakReference<Activity>,
         context: Context,
         jsonResponse: String,
-        localVersionCode: Long
+        localVersionCode: Long,
+        isManualCheck: Boolean = false
     ) {
         try {
             val jsonObject = JSONObject(jsonResponse)
@@ -160,6 +175,11 @@ object UpdateChecker {
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 prefs.edit().putLong(KEY_LAST_CHECK_TIME, System.currentTimeMillis()).apply()
                 Log.d(TAG, "App is up-to-date (Local: $localVersionCode, Remote: $remoteVersionCode)")
+                if (isManualCheck) {
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(context, "You are using the latest version ($tagName)", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing release JSON", e)
