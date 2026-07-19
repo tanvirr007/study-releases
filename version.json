@@ -1,6 +1,6 @@
 {
-  "versionCode": 67,
-  "versionName": "v4.5.67",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.67/CQ.apk",
-  "changelog": "* **fix: check updates shortcut** (a6ea57b)\n  • Track active update dialog to dismiss stale ones on manual check\n  • Add AtomicBoolean guard to prevent concurrent check collisions\n  • Consume shortcut intent data and fix WebView deep link fallback\n"
+  "versionCode": 68,
+  "versionName": "v4.5.68",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.68/CQ.apk",
+  "changelog": "* **fix: global changelog formatting** (9a0bfbf)\n  - Standardize main commits to bullet (•) and sub-commits to dash (-)\n  - Clean duplicate bullet symbols in app, Telegram bot, and workflows\n  - Preserve Build Information key-value header styling\n"
 }
