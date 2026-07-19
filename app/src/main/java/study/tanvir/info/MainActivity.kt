@@ -557,9 +557,6 @@ class MainActivity : AppCompatActivity() {
         if (isPermissionsFlowStarted || isPermissionsFlowCompleted) return
         isPermissionsFlowStarted = true
 
-        val prefs = getSharedPreferences("update_prefs", MODE_PRIVATE)
-        val alreadyPrompted = prefs.getBoolean("ota_permission_prompted", false)
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val permission = "android.permission.POST_NOTIFICATIONS"
             if (ContextCompat.checkSelfPermission(this, permission) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -570,24 +567,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         // If notification permission already granted or below Android 13
-        if (!alreadyPrompted) {
-            showOtaPermissionPopup()
-        } else {
-            // Already prompted before, proceed to app load and update check directly
-            onPermissionsFlowCompleted()
-        }
+        showOtaPermissionPopup()
     }
 
     private fun showOtaPermissionPopup() {
-        val prefs = getSharedPreferences("update_prefs", MODE_PRIVATE)
-        if (prefs.getBoolean("ota_permission_prompted", false)) {
-            onPermissionsFlowCompleted()
-            return
-        }
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (packageManager.canRequestPackageInstalls()) {
-                prefs.edit().putBoolean("ota_permission_prompted", true).apply()
                 onPermissionsFlowCompleted()
                 return
             }
@@ -597,7 +582,6 @@ class MainActivity : AppCompatActivity() {
                 .setMessage("• This app supports OTA updates\n• Allow permission to install updates")
                 .setCancelable(false)
                 .setPositiveButton("Allow") { d, _ ->
-                    prefs.edit().putBoolean("ota_permission_prompted", true).apply()
                     try {
                         val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
                             data = Uri.parse("package:$packageName")
@@ -608,13 +592,11 @@ class MainActivity : AppCompatActivity() {
                     onPermissionsFlowCompleted()
                 }
                 .setNegativeButton("Later") { d, _ ->
-                    prefs.edit().putBoolean("ota_permission_prompted", true).apply()
                     d.dismiss()
                     onPermissionsFlowCompleted()
                 }
                 .show()
         } else {
-            prefs.edit().putBoolean("ota_permission_prompted", true).apply()
             onPermissionsFlowCompleted()
         }
     }
