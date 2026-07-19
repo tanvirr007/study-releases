@@ -1,6 +1,6 @@
 {
-  "versionCode": 62,
-  "versionName": "v3.5.62",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v3.5.62/CQ.apk",
-  "changelog": "* **ci: update automated OTA commit message style and add Change-Id** (8653632)\n  - Format automated workflow commit title as release: OTA manifest v...\n  - Include Signed-off-by flag and auto-generated Change-Id in workflow commits\n* **update: raw CDN version.json v3.5.61** (2885b95)\n"
+  "versionCode": 63,
+  "versionName": "v3.5.63",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v3.5.63/CQ.apk",
+  "changelog": "* **fix: add cache buster to OTA update checks and filter automated commits from changelogs** (1bc82a9)\n  - Add timestamp cache buster and anti-caching HTTP headers to UpdateChecker to defeat raw GitHub CDN caching\n  - Reorder OTA manifest update before release tagging in workflow to prevent automated commits from leaking into future changelogs\n  - Filter automated OTA and version manifest commits out of changelog generation\n"
 }
