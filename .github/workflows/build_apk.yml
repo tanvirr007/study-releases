@@ -89,6 +89,10 @@ jobs:
           else
             while read -r hash title; do
               if [ ! -z "$hash" ]; then
+                # Skip automated release & OTA manifest commits from previous builds
+                if [[ "$title" =~ ^release:\ OTA\ manifest ]] || [[ "$title" =~ ^update:\ raw\ CDN ]] || [[ "$title" =~ ^Update\ version\.json ]]; then
+                  continue
+                fi
                 CHANGELOG="${CHANGELOG}* **$title** (${hash:0:7})"$'\n'
                 # Get body of commit, filter out metadata
                 body=$(git log -1 --pretty=format:"%b" "$hash" | grep -v -E "^Signed-off-by:|^Change-Id:|^Co-authored-by:" || true)
@@ -101,6 +105,10 @@ jobs:
                 fi
               fi
             done <<< "$commits"
+          fi
+          
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="* No changes."
           fi
           
           # Generate release_notes.md
@@ -138,17 +146,6 @@ jobs:
           path: app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk
           if-no-files-found: error
 
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Create the new release with the APKs for this specific build tag using the generated notes file
-          gh release create "v${{ env.VERSION_NAME }}.${{ github.run_number }}" \
-            --title "v${{ env.VERSION_NAME }}.${{ github.run_number }}" \
-            -F release_notes.md \
-            app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk \
-            app/build/outputs/apk/release/CQ.apk
-
       - name: Update Raw CDN version.json
         env:
           RUN_NUMBER: ${{ github.run_number }}
@@ -161,8 +158,19 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add version.json
-          git commit -s -m "release: OTA manifest v${{ env.VERSION_NAME }}.${{ github.run_number }}" -m "- Auto-updated version manifest for raw GitHub CDN OTA checks"$'\n\n'"$CHANGE_ID" || exit 0
+          git commit -s -m "release: OTA manifest v${{ env.VERSION_NAME }}.${{ github.run_number }} [skip ci]" -m "- Auto-updated version manifest for raw GitHub CDN OTA checks"$'\n\n'"$CHANGE_ID" || exit 0
           git push origin master
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create the new release with the APKs for this specific build tag using the generated notes file
+          gh release create "v${{ env.VERSION_NAME }}.${{ github.run_number }}" \
+            --title "v${{ env.VERSION_NAME }}.${{ github.run_number }}" \
+            -F release_notes.md \
+            app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk \
+            app/build/outputs/apk/release/CQ.apk
 
       - name: Send Telegram Notification
         continue-on-error: true

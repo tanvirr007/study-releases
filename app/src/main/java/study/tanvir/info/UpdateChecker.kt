@@ -60,15 +60,20 @@ object UpdateChecker {
             Toast.makeText(context, "Checking for updates...", Toast.LENGTH_SHORT).show()
         }
 
-        // Fetch latest version manifest asynchronously from Raw GitHub CDN
+        // Fetch latest version manifest asynchronously from Raw GitHub CDN with cache-busting
         updateExecutor.execute {
             var connection: HttpURLConnection? = null
             try {
-                val url = URL(VERSION_JSON_URL)
+                val cacheBusterUrl = "$VERSION_JSON_URL?t=${System.currentTimeMillis()}"
+                val url = URL(cacheBusterUrl)
                 connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 10000
                 connection.readTimeout = 10000
+                connection.useCaches = false
+                connection.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate")
+                connection.setRequestProperty("Pragma", "no-cache")
+                connection.setRequestProperty("Expires", "0")
                 connection.setRequestProperty("User-Agent", "CQ-WebView-App")
                 connection.setRequestProperty("Accept", "application/json")
 
