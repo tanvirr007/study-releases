@@ -191,9 +191,9 @@ object UpdateChecker {
         // Clean up Markdown formatting to make it clean text for standard Android TextViews
         return rawText
             .replace(Regex("\\*\\*"), "") // Remove bold indicators
-            .replace(Regex("(?m)^\\s+\\*\\s+"), "  - ") // Convert sub-bullets (nested asterisks) to dashes
-            .replace(Regex("\\*\\s+"), "• ") // Convert main bullets to standard round bullets
             .replace(Regex("`"), "") // Remove code block ticks
+            .replace(Regex("(?m)^(\\s+)[-*•][-\\s*•]*"), "$1- ") // Sub-bullets get single '-' with indentation
+            .replace(Regex("(?m)^(?![-*•]\\s*(?:Version|Commit|Build Time|Android|SHA-256):)[-*•]\\s*"), "• ") // Main commits get single '•'
             .trim()
     }
 

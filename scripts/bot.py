@@ -21,10 +21,15 @@ def escape_html(text):
 def format_changelog(changelog, repo):
     formatted_lines = []
     for line in changelog.splitlines():
-        if line.strip().startswith('* **'):
+        is_indented = line.startswith('  ') or line.startswith('\t')
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        if stripped.startswith('* **') or stripped.startswith('• **') or stripped.startswith('- **'):
             try:
                 # Format: * **Title** (hash) -> • <b>Title</b> (hash-link)
-                parts = line.split('**')
+                parts = stripped.split('**')
                 title = parts[1]
                 hash_part = parts[2].strip()  # e.g., "(a1b2c3d)"
                 short_hash = hash_part.strip('()')
@@ -32,19 +37,13 @@ def format_changelog(changelog, repo):
                 formatted_line = f"• <b>{escape_html(title)}</b> (<a href=\"{commit_url}\">{short_hash}</a>)"
                 formatted_lines.append(formatted_line)
             except Exception:
-                formatted_lines.append(escape_html(line))
-        elif line.strip().startswith('* '):
-            formatted_lines.append(escape_html(line).replace('* ', '• '))
+                formatted_lines.append(f"• {escape_html(stripped)}")
+        elif not is_indented:
+            clean_text = re.sub(r'^[-*•]+\s*', '', stripped)
+            formatted_lines.append(f"• <b>{escape_html(clean_text)}</b>")
         else:
-            stripped = line.strip()
-            if stripped:
-                if stripped.startswith('- '):
-                    content = stripped[2:].strip()
-                elif stripped.startswith('* '):
-                    content = stripped[2:].strip()
-                else:
-                    content = stripped
-                formatted_lines.append(f"  - {escape_html(content)}")
+            clean_text = re.sub(r'^[-*•]+\s*', '', stripped)
+            formatted_lines.append(f"  - {escape_html(clean_text)}")
     return "\n".join(formatted_lines)
 
 def send_request(req):

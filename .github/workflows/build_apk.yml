@@ -99,7 +99,8 @@ jobs:
                 if [ ! -z "$body" ]; then
                   while IFS= read -r line; do
                     if [ ! -z "$line" ]; then
-                      CHANGELOG="${CHANGELOG}  $line"$'\n'
+                      clean_line=$(echo "$line" | sed -E 's/^[[:space:]]*[-*•]+[[:space:]]*/- /')
+                      CHANGELOG="${CHANGELOG}  $clean_line"$'\n'
                     fi
                   done <<< "$body"
                 fi
