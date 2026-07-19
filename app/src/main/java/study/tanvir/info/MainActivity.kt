@@ -197,6 +197,7 @@ class MainActivity : AppCompatActivity() {
 
             if (scheme == "cq") {
                 if (host == "check-updates" || path.contains("check-updates")) {
+                    intent?.data = null
                     UpdateChecker.checkForUpdates(this, isManualCheck = true)
                 } else {
                     val webUrl = "$WEB_URL$path$query$fragment"
@@ -352,7 +353,11 @@ class MainActivity : AppCompatActivity() {
                 val path = intent?.data?.path ?: ""
                 val query = intent?.data?.query?.let { "?$it" } ?: ""
                 val fragment = intent?.data?.fragment?.let { "#$it" } ?: ""
-                binding.webView.loadUrl("$WEB_URL$path$query$fragment")
+                if (host == "check-updates" || path.contains("check-updates")) {
+                    binding.webView.loadUrl(WEB_URL)
+                } else {
+                    binding.webView.loadUrl("$WEB_URL$path$query$fragment")
+                }
             } else if (deepLinkUrl != null && (host == "study-tanvirr007.vercel.app" || host == "www.study-tanvirr007.vercel.app")) {
                 binding.webView.loadUrl(deepLinkUrl)
             } else {

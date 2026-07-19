@@ -37,6 +37,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 object UpdateChecker {
     private const val TAG = "UpdateChecker"
@@ -48,6 +49,8 @@ object UpdateChecker {
 
     // Single static executor to reuse background threads
     private val updateExecutor = Executors.newSingleThreadExecutor()
+    private val isChecking = AtomicBoolean(false)
+    private var activeDialogRef: WeakReference<AlertDialog>? = null
 
     fun checkForUpdates(activity: Activity, isManualCheck: Boolean = false) {
         val activityRef = WeakReference(activity)
@@ -58,6 +61,19 @@ object UpdateChecker {
 
         if (isManualCheck) {
             Toast.makeText(context, "Checking for updates...", Toast.LENGTH_SHORT).show()
+            // Dismiss stale or currently visible dialog to display a clean new update dialog
+            Handler(Looper.getMainLooper()).post {
+                activeDialogRef?.get()?.let {
+                    if (it.isShowing) {
+                        try { it.dismiss() } catch (_: Exception) {}
+                    }
+                }
+            }
+        }
+
+        if (!isChecking.compareAndSet(false, true)) {
+            Log.d(TAG, "Update check already in progress, skipping duplicate request.")
+            return
         }
 
         // Fetch latest version manifest asynchronously from Raw GitHub CDN with cache-busting
@@ -103,6 +119,7 @@ object UpdateChecker {
                     }
                 }
             } finally {
+                isChecking.set(false)
                 connection?.disconnect()
             }
         }
@@ -269,6 +286,7 @@ object UpdateChecker {
             }
             .create()
 
+        activeDialogRef = WeakReference(dialog)
         dialog.show()
 
         val positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
