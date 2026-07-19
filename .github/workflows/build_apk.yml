@@ -149,6 +149,20 @@ jobs:
             app/build/outputs/apk/release/CQ-v${{ env.VERSION_NAME }}.${{ github.run_number }}.apk \
             app/build/outputs/apk/release/CQ.apk
 
+      - name: Update Raw CDN version.json
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+          VERSION_NAME: ${{ env.VERSION_NAME }}
+          REPOSITORY: ${{ github.repository }}
+          CHANGELOG: ${{ env.CHANGELOG }}
+        run: |
+          python3 scripts/bot.py ota
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          git commit -m "update: raw CDN version.json v${{ env.VERSION_NAME }}.${{ github.run_number }}" || exit 0
+          git push origin master
+
       - name: Send Telegram Notification
         continue-on-error: true
         env:

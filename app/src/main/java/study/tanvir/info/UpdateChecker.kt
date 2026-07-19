@@ -44,7 +44,7 @@ object UpdateChecker {
     private const val KEY_LAST_CHECK_TIME = "last_check_time"
     private const val CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000L // 4 hours
 
-    private const val GITHUB_API_URL = "https://api.github.com/repos/tanvirr007/study-releases/releases/latest"
+    private const val VERSION_JSON_URL = "https://raw.githubusercontent.com/tanvirr007/study-releases/master/version.json"
 
     // Single static executor to reuse background threads
     private val updateExecutor = Executors.newSingleThreadExecutor()
@@ -52,36 +52,25 @@ object UpdateChecker {
     fun checkForUpdates(activity: Activity, isManualCheck: Boolean = false) {
         val activityRef = WeakReference(activity)
         val context = activity.applicationContext
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         // Get local version code
         val localVersionCode = getLocalVersionCode(context)
-
-        // Enforce 4-hour cache limit unless it's a local debug build or a manual user request
-        if (!isManualCheck && localVersionCode != 1L) {
-            val lastCheckTime = prefs.getLong(KEY_LAST_CHECK_TIME, 0L)
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - lastCheckTime < CHECK_INTERVAL_MS) {
-                Log.d(TAG, "Update check skipped: 4h caching interval active")
-                return
-            }
-        }
 
         if (isManualCheck) {
             Toast.makeText(context, "Checking for updates...", Toast.LENGTH_SHORT).show()
         }
 
-        // Fetch latest release details asynchronously
+        // Fetch latest version manifest asynchronously from Raw GitHub CDN
         updateExecutor.execute {
             var connection: HttpURLConnection? = null
             try {
-                val url = URL(GITHUB_API_URL)
+                val url = URL(VERSION_JSON_URL)
                 connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 10000
                 connection.readTimeout = 10000
                 connection.setRequestProperty("User-Agent", "CQ-WebView-App")
-                connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                connection.setRequestProperty("Accept", "application/json")
 
                 val responseCode = connection.responseCode
                 if (responseCode == HttpURLConnection.HTTP_OK) {
@@ -138,51 +127,33 @@ object UpdateChecker {
     ) {
         try {
             val jsonObject = JSONObject(jsonResponse)
-            val tagName = jsonObject.optString("tag_name", "")
-            val rawBody = jsonObject.optString("body", "No changelog provided.")
-            val htmlUrl = jsonObject.optString("html_url", "https://github.com/tanvirr007/study-releases/releases/latest")
+            val remoteVersionCode = jsonObject.optLong("versionCode", 0L)
+            val versionName = jsonObject.optString("versionName", "New Version")
+            val downloadUrl = jsonObject.optString("downloadUrl", "https://github.com/tanvirr007/study-releases/releases/latest")
+            val rawBody = jsonObject.optString("changelog", "No changelog provided.")
 
-            // Extract remote version code (last digit/number segment from tag, e.g. "v2.1.15" -> 15)
-            val remoteVersionCode = tagName.substringAfterLast(".").toLongOrNull() ?: 0L
-
-            // Extract and clean up only the Changelog section
+            // Clean up changelog text for dialog display
             val changelog = extractAndCleanChangelog(rawBody)
-
-            // Try to find the direct APK download url from release assets
-            val assets = jsonObject.optJSONArray("assets")
-            var downloadUrl = htmlUrl // Default fallback to browser release page
-            if (assets != null) {
-                for (i in 0 until assets.length()) {
-                    val asset = assets.optJSONObject(i)
-                    val name = asset?.optString("name", "") ?: ""
-                    if (name == "CQ.apk" || name.endsWith(".apk")) {
-                        downloadUrl = asset.optString("browser_download_url", downloadUrl)
-                        break
-                    }
-                }
-            }
 
             // If a newer version is available
             if (remoteVersionCode > localVersionCode) {
-                showUpdateNotification(context, tagName, downloadUrl)
+                showUpdateNotification(context, versionName, downloadUrl)
                 Handler(Looper.getMainLooper()).post {
                     val activity = activityRef.get()
                     if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
-                        showUpdateDialog(activity, tagName, changelog, downloadUrl, remoteVersionCode)
+                        showUpdateDialog(activity, versionName, changelog, downloadUrl, remoteVersionCode)
                     }
                 }
             } else {
-                val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                prefs.edit().putLong(KEY_LAST_CHECK_TIME, System.currentTimeMillis()).apply()
                 Log.d(TAG, "App is up-to-date (Local: $localVersionCode, Remote: $remoteVersionCode)")
                 if (isManualCheck) {
                     Handler(Looper.getMainLooper()).post {
-                        Toast.makeText(context, "You are using the latest version ($tagName)", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "You are using the latest version ($versionName)", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing release JSON", e)
+            Log.e(TAG, "Error parsing version.json", e)
         }
     }
 

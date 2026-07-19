@@ -143,6 +143,7 @@ class MainActivity : AppCompatActivity() {
         setupLockScreen()
         checkPostUpdateToast()
         handleDeepLink(intent)
+        checkForUpdatesIfNeeded()
     }
 
     override fun onResume() {

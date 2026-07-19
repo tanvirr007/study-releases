@@ -571,13 +571,41 @@ def release():
             print(f"Error sending media group: {e}")
 
 
+def ota():
+    run_number_str = os.environ.get("RUN_NUMBER", "1")
+    version_name = os.environ.get("VERSION_NAME", "1.0")
+    repo = os.environ.get("REPOSITORY", "tanvirr007/study-releases")
+    changelog = os.environ.get("CHANGELOG", "No changelog provided.")
+
+    try:
+        version_code = int(run_number_str)
+    except ValueError:
+        version_code = 1
+
+    full_version_name = f"v{version_name}.{version_code}"
+    download_url = f"https://github.com/{repo}/releases/download/{full_version_name}/CQ.apk"
+
+    manifest = {
+        "versionCode": version_code,
+        "versionName": full_version_name,
+        "downloadUrl": download_url,
+        "changelog": changelog
+    }
+
+    out_path = "version.json"
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, ensure_ascii=False)
+
+    print(f"Successfully generated {out_path} for {full_version_name}")
+
+
 # ═══════════════════════════════════════════════════════════════════
 # Entry Point
 # ═══════════════════════════════════════════════════════════════════
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: bot.py <monitor|release>")
+        print("Usage: bot.py <monitor|release|ota>")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -585,6 +613,8 @@ def main():
         monitor()
     elif cmd == "release":
         release()
+    elif cmd == "ota":
+        ota()
     else:
         print(f"Unknown command: {cmd}")
         sys.exit(1)
