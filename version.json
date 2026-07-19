@@ -1,6 +1,6 @@
 {
-  "versionCode": 63,
-  "versionName": "v4.5.63",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.63/CQ.apk",
-  "changelog": "* **fix: add cache buster to OTA update checks and filter automated commits from changelogs** (1bc82a9)\n  - Add timestamp cache buster and anti-caching HTTP headers to UpdateChecker to defeat raw GitHub CDN caching\n  - Reorder OTA manifest update before release tagging in workflow to prevent automated commits from leaking into future changelogs\n  - Filter automated OTA and version manifest commits out of changelog generation\n"
+  "versionCode": 64,
+  "versionName": "v4.5.64",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.64/CQ.apk",
+  "changelog": "* **bump app version to 4.5** (cc17091)\n  - Bump app versionName from 3.5 to 4.5 in build.gradle.kts\n  - Update versionName and download URL in version.json\n"
 }
