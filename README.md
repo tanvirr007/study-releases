@@ -1,30 +1,38 @@
 # CQ — Android WebView Application
 
-CQ is a modern, lightweight Android wrapper application built with Kotlin. It wraps a web application (like the [CQ Demo](https://study-tanvirr007.vercel.app)) using a customized `WebView` that delivers a native-like experience, including dynamic system bar coloring, modern splash screen integration, and native navigation control.
+CQ is a modern, feature-packed Android wrapper application built with Kotlin. It wraps a web application (like the [CQ Demo](https://study-tanvirr007.vercel.app)) using a highly customized `WebView` that delivers a native-like experience, including dynamic system bar coloring, real-time background OTA updates, biometric app locking, and file download support.
 
 ---
 
-## Key Features
+## 🌟 Key Features
 
-* **WebView Container**: A highly customized `WebView` that renders web apps seamlessly with full JavaScript and client-side integration.
-* **Modern Splash Screen API**: Employs Android’s official Splash Screen API to keep the splash screen visible until the initial web page loads fully, avoiding raw white/blank screens.
-* **Dynamic System Bar Theme**: Automatically styles the Android status and navigation bars dynamically based on the active page URL to match the web app's theme color (e.g., light theme on home page, dark theme on internal dashboards).
-* **Native Back Navigation**: Intercepts back gestures/presses to navigate back in the `WebView`'s history rather than closing the app immediately.
+* **Customized WebView Engine**: Renders modern web apps seamlessly with JavaScript, DOM storage, cookies, blob downloads, and sub-resource asset loading (including external CDN images).
+* **Real-time & Background OTA Updates**:
+  * **Background WorkManager**: `OtaCheckWorker` checks for updates periodically in the background even when the app is completely closed.
+  * **Real-time Push Stream**: `NtfyStreamListener` connects to `ntfy.sh` for instant real-time update notifications.
+  * **In-App Download Manager**: Downloads update APKs directly inside the app with a live progress bar, speed (MB/s), percentage, and ETA.
+* **Security & Privacy**:
+  * **Biometric Lock**: Optional fingerprint/face unlock prompt when launching or resuming the app.
+  * **Screen Privacy**: Toggleable `FLAG_SECURE` to prevent screenshots and task switcher previews.
+* **Modern Splash Screen API**: Employs Android’s official Splash Screen API to keep the splash screen visible until the initial web page loads fully.
+* **Dynamic System Bar Theme**: Automatically synchronizes status and navigation bar colors with the web app's theme state.
+* **Native Downloads & Printing**: Native bridge for blob downloads, data URIs, and browser printing.
 * **Automated CI/CD**: Automatic generation of signed release APKs on every commit to `master` via GitHub Actions.
-* **OTA Update Checker**: Automatically queries the GitHub Releases API on startup (with a 4-hour caching interval) to notify users of new versions via in-app Material Dialogs and System Tray notifications.
 
 ---
 
-## Key File Locations
+## 📂 Key File Locations
 
-* **Core Logic**: [MainActivity.kt](app/src/main/java/study/tanvir/info/MainActivity.kt) — Handles WebView configurations, splash screen, and dynamic bar coloring.
-* **Update Checker Helper**: [UpdateChecker.kt](app/src/main/java/study/tanvir/info/UpdateChecker.kt) — Asynchronously queries and parses GitHub Release metadata, displaying system notifications and alert dialogs.
-* **Gradle Configuration**: [app/build.gradle.kts](app/build.gradle.kts) — Android build settings and dependencies.
-* **CI/CD Workflow**: [.github/workflows/build_apk.yml](.github/workflows/build_apk.yml) — GitHub Actions pipeline config.
+* **Core UI & Activity**: [MainActivity.kt](app/src/main/java/study/tanvir/info/MainActivity.kt) — WebView setup, back navigation, permissions, theme sync, biometric lock.
+* **OTA Update Engine**: [UpdateChecker.kt](app/src/main/java/study/tanvir/info/UpdateChecker.kt) — Version parsing, update dialog, in-app downloader, and system notifications.
+* **Background Worker**: [OtaCheckWorker.kt](app/src/main/java/study/tanvir/info/OtaCheckWorker.kt) — Periodic background update checks via Android `WorkManager`.
+* **Real-time Push**: [NtfyStreamListener.kt](app/src/main/java/study/tanvir/info/NtfyStreamListener.kt) — SSE listener for `ntfy.sh` real-time push events.
+* **Gradle Build Settings**: [app/build.gradle.kts](app/build.gradle.kts) — Android build configuration and dependencies.
+* **CI/CD Pipeline**: [.github/workflows/build_apk.yml](.github/workflows/build_apk.yml) — GitHub Actions automated build workflow.
 
 ---
 
-## Local Setup & Development
+## 🛠️ Local Setup & Development
 
 ### Prerequisites
 * **Android Studio** (Koala or newer recommended)
@@ -32,24 +40,24 @@ CQ is a modern, lightweight Android wrapper application built with Kotlin. It wr
 
 ### Step-by-Step Setup
 1. **Open the Project**: Launch Android Studio, select **File** -> **Open**, and pick the repository root directory. Gradle will sync automatically.
-2. **Run on Device/Emulator**: Connect your target device via USB or start a virtual device (AVD), then click the green **Run** button.
+2. **Run on Device/Emulator**: Connect your target device via USB or start an emulator (AVD), then click **Run**.
 3. **Build APKs locally**:
    ```bash
-   # Build a debug build for local testing
+   # Build a debug APK for local testing
    ./gradlew assembleDebug
 
-   # Build a release build locally (requires keystore.properties setup)
+   # Build a release APK locally (requires keystore setup)
    ./gradlew assembleRelease
    ```
 
 ---
 
-## CI/CD & Signing Configuration
+## 🚀 CI/CD & Signing Configuration
 
 GitHub Actions automatically builds and signs release APKs on every push to the `master` branch.
 
 ### Configuring Signing Keys
-To enable automatic release signing, configure the following secrets in your GitHub Repository under **Settings** -> **Secrets and variables** -> **Actions**:
+To enable automatic release signing, configure the following secrets under **Settings** -> **Secrets and variables** -> **Actions**:
 
 1. **Prepare Keystore**: Generate a standard release keystore `.jks` file.
 2. **Convert Keystore to Base64**:
@@ -57,55 +65,23 @@ To enable automatic release signing, configure the following secrets in your Git
      ```powershell
      [Convert]::ToBase64String([IO.File]::ReadAllBytes("your-key.jks"))
      ```
-   * **macOS / Linux (Terminal)**:
+   * **macOS / Linux**:
      ```bash
      openssl base64 -in your-key.jks -out keystore-base64.txt
      ```
 3. **Add Repository Secrets**:
-   * `KEYSTORE` - The Base64 string of your keystore file.
-   * `KEYSTORE_PASSWORD` - The password to your keystore.
-   * `KEY_ALIAS` - The alias name of your key.
-   * `KEY_PASSWORD` - The password to your key alias.
-
-When the workflow runs, it recreates the keystore dynamically and builds the production-ready APK.
+   * `KEYSTORE` - Base64 string of your keystore file.
+   * `KEYSTORE_PASSWORD` - Password for your keystore.
+   * `KEY_ALIAS` - Alias name of your key.
+   * `KEY_PASSWORD` - Password for your key alias.
 
 ---
 
-## Versioning & Upgrade Policy
+## 🔄 OTA Update Architecture
 
-### How Versioning Works
-* **Base Version**: Defined locally in [app/build.gradle.kts](app/build.gradle.kts) via the `versionName` property (e.g., `"1.0"`).
-* **CI/CD Builds**: The GitHub Actions pipeline dynamically injects and updates these parameters prior to compilation:
-  * **`versionCode`**: Map to the GitHub Actions run number (`${{ github.run_number }}`). This is a strictly incrementing integer required by Android to determine if a build is newer.
-  * **`versionName`**: Constructed dynamically by combining the local base version and the run number: `<base_version_name>.<run_number>` (e.g., `1.0.12`).
-
-### How to Bump the Version (Step-by-Step)
-1. Open [app/build.gradle.kts](app/build.gradle.kts).
-2. Locate the `versionName` variable in the `defaultConfig` block (around line 20):
-   ```kotlin
-   versionName = "1.0"
-   ```
-3. Change `"1.0"` to your new desired base version (e.g., `"1.1"` or `"2.0"`).
-4. Stage, commit, and push the change to GitHub:
-   ```bash
-   git add app/build.gradle.kts
-   git commit -m "chore: bump version to 1.1"
-   git push
-   ```
-   The next build on GitHub Actions will automatically start numbering with your new base version prefix (e.g., `v1.1.13`).
-
-### Upgrade and Downgrade Constraints
-Android OS enforces specific constraints for security and data integrity:
-
-* **Upgrades**: Users can install an updated APK directly over an existing installation only if the incoming APK's `versionCode` is **strictly higher** than the currently installed version.
-* **Downgrades**: Android does **not** allow installing an APK with a lower `versionCode` over a higher one (results in `INSTALL_FAILED_VERSION_DOWNGRADE`).
-
-> [!WARNING]
-> **Workflow Reset Warning:** If you delete or recreate the GitHub workflow, the GitHub run number will reset back to `1`. If this occurs, existing devices with previous builds (e.g., run number `42`) will fail to install newer builds until they first **uninstall** the old app (which will delete the app's local state), or until you manually increment the base version/versioning logic.
-
-### OTA Update Checks
-The app automatically checks for updates using the GitHub Releases API:
-* **Endpoint:** Queries `https://api.github.com/repos/tanvirr007/study-releases/releases/latest`.
-* **Version Comparison:** The updater extracts the run number from the release's tag (e.g., `15` from `v2.1.15`) and compares it against the local `versionCode`.
-* **Interval:** Checks are run at most once every 4 hours. Local development builds (where `versionCode` is `1`) bypass this cache to allow immediate testing.
-* **Alert Mechanism:** If an update is detected, the user is notified via an in-app dialog and a system tray notification. Tapping "Update Now" redirects them to their system browser to download the signed production APK directly.
+### How OTA Checking Works
+1. **Manifest File**: The app checks `https://raw.githubusercontent.com/tanvirr007/study-releases/master/version.json` with cache-busting query params.
+2. **Version Comparison**: The app compares the remote `versionCode` against the locally installed `versionCode`.
+3. **Notification & Installation**:
+   * **Background**: If a newer version is found, a native notification is posted to the status bar.
+   * **In-App Flow**: Clicking **Update Now** downloads the `.apk` directly within the app, verifies package integrity, and triggers the Android Package Installer.
