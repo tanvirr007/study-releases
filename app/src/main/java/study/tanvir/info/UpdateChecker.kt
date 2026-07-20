@@ -1,5 +1,6 @@
 package study.tanvir.info
 
+import android.animation.ObjectAnimator
 import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -16,6 +17,7 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.StyleSpan
 import android.util.Log
+import android.view.Gravity
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
@@ -214,7 +216,11 @@ object UpdateChecker {
         downloadUrl: String,
         remoteVersionCode: Long
     ) {
-        val messageText = "A new version ($versionName) of the app is available\n\nWhat's New:\n$changelog"
+        val currentVersionName = getLocalVersionName(activity)
+        val currentVerStr = if (currentVersionName.startsWith("v", ignoreCase = true)) currentVersionName else "v$currentVersionName"
+        val targetVerStr = if (versionName.startsWith("v", ignoreCase = true)) versionName else "v$versionName"
+
+        val messageText = "A new version of the app is available\n\nWhat's New:\n$changelog"
         val spannableMessage = SpannableStringBuilder(messageText)
         val boldStart = messageText.indexOf("What's New:")
         if (boldStart != -1) {
@@ -227,68 +233,181 @@ object UpdateChecker {
         }
 
         val density = activity.resources.displayMetrics.density
-        val padding = (16 * density).toInt()
+        val padding = (20 * density).toInt()
 
-        // Container view constructed programmatically for styling flexibility
+        // Fetch theme colors dynamically
+        val typedArray = activity.obtainStyledAttributes(intArrayOf(
+            com.google.android.material.R.attr.colorPrimary,
+            android.R.attr.textColorPrimary,
+            android.R.attr.textColorSecondary
+        ))
+        val primaryColor = typedArray.getColor(0, android.graphics.Color.parseColor("#1976D2"))
+        val primaryTextColor = typedArray.getColor(1, android.graphics.Color.BLACK)
+        val secondaryTextColor = typedArray.getColor(2, android.graphics.Color.GRAY)
+        typedArray.recycle()
+
         val container = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(padding, padding, padding, padding)
         }
 
-        // Message text view showing changelog details
+        // Version Transition Pill (e.g. v2.1.30 → v2.1.31)
+        val versionPill = TextView(activity).apply {
+            text = "$currentVerStr  →  $targetVerStr"
+            textSize = 13f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(primaryColor)
+
+            val pillBg = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadius = 14 * density
+                setColor(android.graphics.Color.argb(28, android.graphics.Color.red(primaryColor), android.graphics.Color.green(primaryColor), android.graphics.Color.blue(primaryColor)))
+            }
+            background = pillBg
+            setPadding((12 * density).toInt(), (6 * density).toInt(), (12 * density).toInt(), (6 * density).toInt())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = (14 * density).toInt()
+            }
+        }
+        container.addView(versionPill)
+
+        // Changelog message view
         val messageView = TextView(activity).apply {
             text = spannableMessage
-            textSize = 15f
-            val typedArray = activity.obtainStyledAttributes(intArrayOf(android.R.attr.textColorPrimary))
-            val color = typedArray.getColor(0, android.graphics.Color.BLACK)
-            typedArray.recycle()
-            setTextColor(color)
+            textSize = 14f
+            setTextColor(primaryTextColor)
         }
         container.addView(messageView)
 
-        // Spacer element
-        val spacer = View(activity).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                (12 * density).toInt()
-            )
-        }
-        container.addView(spacer)
-
-        // Progress bar (initially invisible)
-        val progressBar = ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal).apply {
+        // Progress section container (initially GONE)
+        val progressContainer = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
             visibility = View.GONE
-            max = 100
-            isIndeterminate = false
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
-        container.addView(progressBar)
 
-        // Progress description text (initially invisible)
-        val progressTextView = TextView(activity).apply {
-            visibility = View.GONE
+        // Status message & percentage row
+        val statusRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val statusTextView = TextView(activity).apply {
+            text = "Downloading update..."
             textSize = 14f
-            val typedArray = activity.obtainStyledAttributes(intArrayOf(android.R.attr.textColorSecondary))
-            val color = typedArray.getColor(0, android.graphics.Color.GRAY)
-            typedArray.recycle()
-            setTextColor(color)
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(primaryTextColor)
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+        statusRow.addView(statusTextView)
+
+        val percentageTextView = TextView(activity).apply {
+            text = "0%"
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(primaryColor)
+        }
+        statusRow.addView(percentageTextView)
+        progressContainer.addView(statusRow)
+
+        // Animated horizontal progress bar
+        val progressBar = ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            isIndeterminate = false
+            progressDrawable?.setTint(primaryColor)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (8 * density).toInt()
+            ).apply {
+                topMargin = (10 * density).toInt()
+                bottomMargin = (10 * density).toInt()
+            }
+        }
+        progressContainer.addView(progressBar)
+
+        // Metrics row (Downloaded Size / Total Size | Download Speed | ETA)
+        val metricsRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val sizeTextView = TextView(activity).apply {
+            text = "0.0 MB / -- MB"
+            textSize = 12f
+            setTextColor(secondaryTextColor)
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+        metricsRow.addView(sizeTextView)
+
+        val speedTextView = TextView(activity).apply {
+            text = "-- MB/s"
+            textSize = 12f
+            setTextColor(secondaryTextColor)
+            gravity = Gravity.CENTER_HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+        metricsRow.addView(speedTextView)
+
+        val etaTextView = TextView(activity).apply {
+            text = "--"
+            textSize = 12f
+            setTextColor(secondaryTextColor)
+            gravity = Gravity.END
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+        metricsRow.addView(etaTextView)
+        progressContainer.addView(metricsRow)
+
+        // Informational user message at bottom
+        val infoTextView = TextView(activity).apply {
+            text = "Please keep the app open during the update"
+            textSize = 11f
+            setTextColor(secondaryTextColor)
+            setTypeface(null, Typeface.ITALIC)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                topMargin = (4 * density).toInt()
+                topMargin = (12 * density).toInt()
             }
         }
-        container.addView(progressTextView)
+        progressContainer.addView(infoTextView)
+
+        container.addView(progressContainer)
 
         val dialog = MaterialAlertDialogBuilder(activity)
             .setTitle("Update Available")
             .setView(container)
             .setCancelable(false)
-            .setPositiveButton("Update Now", null) // Set null to prevent auto-dismissing
+            .setPositiveButton("Update Now", null)
             .setNegativeButton("Later") { d, _ ->
                 val prefs = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 prefs.edit().putLong(KEY_LAST_CHECK_TIME, System.currentTimeMillis()).apply()
@@ -303,7 +422,7 @@ object UpdateChecker {
         val negativeButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
 
         positiveButton.setOnClickListener {
-            // Android 8.0+ request installation permission check
+            // Android 8.0+ installation permission check
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 if (!activity.packageManager.canRequestPackageInstalls()) {
                     try {
@@ -323,7 +442,7 @@ object UpdateChecker {
                 }
             }
 
-            // If the URL is fallback HTML release page, trigger browser open and dismiss
+            // Fallback for HTML release pages
             if (!downloadUrl.endsWith(".apk") && !downloadUrl.contains("/download/")) {
                 try {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
@@ -335,13 +454,19 @@ object UpdateChecker {
                 return@setOnClickListener
             }
 
-            // Start background downloading with progress update
+            // Start real-time download flow
             downloadApk(
                 activity = activity,
                 downloadUrl = downloadUrl,
-                progressBar = progressBar,
-                progressTextView = progressTextView,
                 messageView = messageView,
+                progressContainer = progressContainer,
+                statusTextView = statusTextView,
+                percentageTextView = percentageTextView,
+                progressBar = progressBar,
+                sizeTextView = sizeTextView,
+                speedTextView = speedTextView,
+                etaTextView = etaTextView,
+                infoTextView = infoTextView,
                 positiveButton = positiveButton,
                 negativeButton = negativeButton,
                 dialog = dialog,
@@ -354,9 +479,15 @@ object UpdateChecker {
     private fun downloadApk(
         activity: Activity,
         downloadUrl: String,
-        progressBar: ProgressBar,
-        progressTextView: TextView,
         messageView: TextView,
+        progressContainer: View,
+        statusTextView: TextView,
+        percentageTextView: TextView,
+        progressBar: ProgressBar,
+        sizeTextView: TextView,
+        speedTextView: TextView,
+        etaTextView: TextView,
+        infoTextView: TextView,
         positiveButton: Button,
         negativeButton: Button,
         dialog: AlertDialog,
@@ -364,21 +495,31 @@ object UpdateChecker {
         versionName: String
     ) {
         val activityRef = WeakReference(activity)
+        val isCancelled = AtomicBoolean(false)
 
-        // State 1: Downloading — hide changelog, hide buttons, show progress
-        dialog.setTitle("Downloading")
+        // UI State: Downloading
+        dialog.setTitle("Updating App")
         messageView.visibility = View.GONE
+        progressContainer.visibility = View.VISIBLE
+        statusTextView.text = "Downloading update..."
+        percentageTextView.text = "0%"
+        progressBar.isIndeterminate = true
         positiveButton.visibility = View.GONE
-        negativeButton.visibility = View.GONE
-        progressBar.visibility = View.VISIBLE
-        progressBar.progress = 0
-        progressTextView.visibility = View.VISIBLE
-        progressTextView.text = "Connecting..."
+        
+        negativeButton.visibility = View.VISIBLE
+        negativeButton.text = "Cancel"
+        negativeButton.setOnClickListener {
+            isCancelled.set(true)
+            dialog.dismiss()
+            Toast.makeText(activity.applicationContext, "Update download cancelled", Toast.LENGTH_SHORT).show()
+        }
 
         updateExecutor.execute {
             var connection: HttpURLConnection? = null
             var inputStream: InputStream? = null
             var outputStream: FileOutputStream? = null
+            var apkFile: File? = null
+
             try {
                 val url = URL(downloadUrl)
                 connection = url.openConnection() as HttpURLConnection
@@ -390,100 +531,231 @@ object UpdateChecker {
                 inputStream = connection.inputStream
 
                 val currentAct = activityRef.get()
-                if (currentAct == null || currentAct.isFinishing || currentAct.isDestroyed) {
+                if (currentAct == null || currentAct.isFinishing || currentAct.isDestroyed || isCancelled.get()) {
                     return@execute
                 }
 
-                val apkFile = File(currentAct.cacheDir, "update.apk")
+                apkFile = File(currentAct.cacheDir, "update.apk")
                 if (apkFile.exists()) {
                     apkFile.delete()
                 }
                 outputStream = FileOutputStream(apkFile)
 
-                val data = ByteArray(4096)
+                val data = ByteArray(8192)
                 var total: Long = 0
                 var count: Int
+
+                var lastSampleTime = System.currentTimeMillis()
+                var lastSampleBytes = 0L
+                var speedFilter = 0L
+
                 while (inputStream.read(data).also { count = it } != -1) {
-                    // Abort download if activity is gone
                     val loopAct = activityRef.get()
-                    if (loopAct == null || loopAct.isFinishing || loopAct.isDestroyed) {
+                    if (loopAct == null || loopAct.isFinishing || loopAct.isDestroyed || isCancelled.get()) {
                         break
                     }
 
                     total += count
                     outputStream.write(data, 0, count)
 
-                    Handler(Looper.getMainLooper()).post {
-                        val viewAct = activityRef.get()
-                        if (viewAct == null || viewAct.isFinishing || viewAct.isDestroyed) return@post
+                    val now = System.currentTimeMillis()
+                    val timeDeltaMs = now - lastSampleTime
 
-                        if (fileLength > 0) {
-                            val progress = (total * 100 / fileLength).toInt()
-                            progressBar.isIndeterminate = false
-                            progressBar.progress = progress
-                            val downloadedStr = formatBytes(total)
-                            val totalStr = formatBytes(fileLength.toLong())
-                            progressTextView.text = "Downloading: $progress% ($downloadedStr / $totalStr)"
-                        } else {
-                            progressBar.isIndeterminate = true
-                            val downloadedStr = formatBytes(total)
-                            progressTextView.text = "Downloading: $downloadedStr"
+                    // Update UI metrics every ~350ms or when complete
+                    if (timeDeltaMs >= 350 || (fileLength > 0 && total >= fileLength)) {
+                        val timeDeltaSec = timeDeltaMs / 1000.0
+                        val bytesDelta = total - lastSampleBytes
+                        val currentSpeed = if (timeDeltaSec > 0) (bytesDelta / timeDeltaSec).toLong() else 0L
+
+                        speedFilter = if (speedFilter == 0L) currentSpeed else (0.7 * speedFilter + 0.3 * currentSpeed).toLong()
+                        lastSampleTime = now
+                        lastSampleBytes = total
+
+                        val progress = if (fileLength > 0) (total * 100 / fileLength).toInt() else 0
+                        val etaSeconds = if (speedFilter > 0 && fileLength > total) (fileLength - total) / speedFilter else 0L
+
+                        val currentDownloadedStr = formatBytes(total)
+                        val totalSizeStr = if (fileLength > 0) formatBytes(fileLength.toLong()) else "--"
+                        val speedStr = formatSpeed(speedFilter)
+                        val etaStr = if (fileLength > 0 && etaSeconds >= 0) formatEta(etaSeconds) else "--"
+
+                        Handler(Looper.getMainLooper()).post {
+                            val viewAct = activityRef.get()
+                            if (viewAct == null || viewAct.isFinishing || viewAct.isDestroyed || isCancelled.get()) return@post
+
+                            statusTextView.text = "Downloading update..."
+                            percentageTextView.text = "$progress%"
+                            
+                            if (fileLength > 0) {
+                                progressBar.isIndeterminate = false
+                                updateProgressSmoothly(progressBar, progress)
+                                sizeTextView.text = "$currentDownloadedStr / $totalSizeStr"
+                            } else {
+                                progressBar.isIndeterminate = true
+                                sizeTextView.text = currentDownloadedStr
+                            }
+                            
+                            speedTextView.text = speedStr
+                            etaTextView.text = etaStr
                         }
                     }
                 }
                 outputStream.flush()
 
-                // State 3: Download complete — show Ready to install
+                if (isCancelled.get()) {
+                    apkFile.delete()
+                    return@execute
+                }
+
+                val finalAct = activityRef.get()
+                if (finalAct == null || finalAct.isFinishing || finalAct.isDestroyed) return@execute
+
+                // --- STAGE 1: Download complete ---
                 Handler(Looper.getMainLooper()).post {
-                    val finalAct = activityRef.get()
-                    if (finalAct == null || finalAct.isFinishing || finalAct.isDestroyed) return@post
-
-                    dialog.setTitle("Ready to install")
-                    progressBar.visibility = View.GONE
-                    progressTextView.visibility = View.GONE
-                    messageView.text = "• Tap restart to install the update"
-                    messageView.visibility = View.VISIBLE
-
-                    positiveButton.text = "Restart"
-                    positiveButton.visibility = View.VISIBLE
-
-                    positiveButton.setOnClickListener {
-                        // Save version name and version code so MainActivity can check post-update status on relaunch
-                        val prefs = finalAct.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                        prefs.edit()
-                            .putString("pending_update_version", versionName)
-                            .putLong("pending_update_version_code", remoteVersionCode)
-                            .apply()
-
-                        installApk(finalAct, apkFile)
-                        dialog.dismiss()
+                    if (finalAct.isFinishing || finalAct.isDestroyed || isCancelled.get()) return@post
+                    statusTextView.text = "Download complete"
+                    percentageTextView.text = "100%"
+                    progressBar.isIndeterminate = false
+                    updateProgressSmoothly(progressBar, 100)
+                    speedTextView.text = ""
+                    etaTextView.text = ""
+                    if (apkFile != null && apkFile.exists()) {
+                        sizeTextView.text = formatBytes(apkFile.length())
                     }
+                }
+
+                Thread.sleep(600)
+                if (isCancelled.get()) return@execute
+
+                // --- STAGE 2: Verifying APK... ---
+                Handler(Looper.getMainLooper()).post {
+                    if (finalAct.isFinishing || finalAct.isDestroyed || isCancelled.get()) return@post
+                    statusTextView.text = "Verifying APK..."
+                    progressBar.isIndeterminate = true
+                }
+
+                // APK validation check using PackageManager
+                var isApkValid = false
+                if (apkFile != null && apkFile.exists() && apkFile.length() > 0) {
+                    try {
+                        val packageInfo = finalAct.packageManager.getPackageArchiveInfo(apkFile.absolutePath, 0)
+                        isApkValid = packageInfo != null
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error parsing downloaded APK package", e)
+                        isApkValid = false
+                    }
+                }
+
+                if (!isApkValid) {
+                    Handler(Looper.getMainLooper()).post {
+                        if (finalAct.isFinishing || finalAct.isDestroyed || isCancelled.get()) return@post
+                        dialog.setTitle("Verification Failed")
+                        statusTextView.text = "Verification failed"
+                        progressBar.visibility = View.GONE
+                        infoTextView.text = "Downloaded update is invalid or corrupted"
+                        infoTextView.setTextColor(android.graphics.Color.RED)
+                        
+                        positiveButton.text = "Retry"
+                        positiveButton.visibility = View.VISIBLE
+                        negativeButton.visibility = View.VISIBLE
+                        negativeButton.text = "Cancel"
+
+                        positiveButton.setOnClickListener {
+                            infoTextView.setTextColor(secondaryTextColor)
+                            infoTextView.text = "Please keep the app open during the update"
+                            downloadApk(
+                                activity = finalAct,
+                                downloadUrl = downloadUrl,
+                                messageView = messageView,
+                                progressContainer = progressContainer,
+                                statusTextView = statusTextView,
+                                percentageTextView = percentageTextView,
+                                progressBar = progressBar,
+                                sizeTextView = sizeTextView,
+                                speedTextView = speedTextView,
+                                etaTextView = etaTextView,
+                                infoTextView = infoTextView,
+                                positiveButton = positiveButton,
+                                negativeButton = negativeButton,
+                                dialog = dialog,
+                                remoteVersionCode = remoteVersionCode,
+                                versionName = versionName
+                            )
+                        }
+                    }
+                    return@execute
+                }
+
+                Thread.sleep(600)
+                if (isCancelled.get()) return@execute
+
+                // --- STAGE 3: Preparing installer... ---
+                Handler(Looper.getMainLooper()).post {
+                    if (finalAct.isFinishing || finalAct.isDestroyed || isCancelled.get()) return@post
+                    statusTextView.text = "Preparing installer..."
+                    
+                    // Save pending update info so post-install splash/toast can verify on app relaunch
+                    val prefs = finalAct.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    prefs.edit()
+                        .putString("pending_update_version", versionName)
+                        .putLong("pending_update_version_code", remoteVersionCode)
+                        .apply()
+                }
+
+                Thread.sleep(500)
+                if (isCancelled.get()) return@execute
+
+                // --- STAGE 4: Launching Android installer... ---
+                Handler(Looper.getMainLooper()).post {
+                    if (finalAct.isFinishing || finalAct.isDestroyed || isCancelled.get()) return@post
+                    statusTextView.text = "Launching Android installer..."
+                }
+
+                Thread.sleep(400)
+
+                Handler(Looper.getMainLooper()).post {
+                    if (finalAct.isFinishing || finalAct.isDestroyed || isCancelled.get()) return@post
+                    if (apkFile != null && apkFile.exists()) {
+                        installApk(finalAct, apkFile)
+                    }
+                    dialog.dismiss()
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error downloading update APK", e)
 
-                // State 2: Download failed — show error and Retry
+                if (isCancelled.get()) return@execute
+
                 Handler(Looper.getMainLooper()).post {
                     val errorAct = activityRef.get()
                     if (errorAct == null || errorAct.isFinishing || errorAct.isDestroyed) return@post
 
                     dialog.setTitle("Download Failed")
+                    statusTextView.text = "Download failed"
                     progressBar.visibility = View.GONE
-                    progressTextView.visibility = View.GONE
-                    messageView.text = "The connection was lost or the download failed"
-                    messageView.visibility = View.VISIBLE
+                    infoTextView.text = "The connection was lost or the download failed"
+                    infoTextView.setTextColor(android.graphics.Color.RED)
 
                     positiveButton.text = "Retry"
                     positiveButton.visibility = View.VISIBLE
+                    negativeButton.visibility = View.VISIBLE
+                    negativeButton.text = "Cancel"
 
                     positiveButton.setOnClickListener {
+                        infoTextView.setTextColor(secondaryTextColor)
+                        infoTextView.text = "Please keep the app open during the update"
                         downloadApk(
                             activity = errorAct,
                             downloadUrl = downloadUrl,
-                            progressBar = progressBar,
-                            progressTextView = progressTextView,
                             messageView = messageView,
+                            progressContainer = progressContainer,
+                            statusTextView = statusTextView,
+                            percentageTextView = percentageTextView,
+                            progressBar = progressBar,
+                            sizeTextView = sizeTextView,
+                            speedTextView = speedTextView,
+                            etaTextView = etaTextView,
+                            infoTextView = infoTextView,
                             positiveButton = positiveButton,
                             negativeButton = negativeButton,
                             dialog = dialog,
@@ -499,6 +771,16 @@ object UpdateChecker {
                 } catch (_: Exception) {}
                 connection?.disconnect()
             }
+        }
+    }
+
+    private fun updateProgressSmoothly(progressBar: ProgressBar, newProgress: Int) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            progressBar.setProgress(newProgress, true)
+        } else {
+            ObjectAnimator.ofInt(progressBar, "progress", progressBar.progress, newProgress)
+                .setDuration(300)
+                .start()
         }
     }
 
@@ -566,8 +848,35 @@ object UpdateChecker {
     private fun formatBytes(bytes: Long): String {
         return when {
             bytes >= 1024 * 1024 -> String.format(Locale.US, "%.1f MB", bytes.toDouble() / (1024 * 1024))
-            bytes >= 1024 -> String.format(Locale.US, "%.1f KB", bytes.toDouble() / 1024)
+            bytes >= 1024 -> String.format(Locale.US, "%.0f KB", bytes.toDouble() / 1024)
             else -> "$bytes B"
         }
     }
+
+    private fun formatSpeed(bytesPerSec: Long): String {
+        return when {
+            bytesPerSec >= 1024 * 1024 -> String.format(Locale.US, "%.1f MB/s", bytesPerSec.toDouble() / (1024 * 1024))
+            bytesPerSec >= 1024 -> String.format(Locale.US, "%.0f KB/s", bytesPerSec.toDouble() / 1024)
+            bytesPerSec > 0 -> "$bytesPerSec B/s"
+            else -> "0 KB/s"
+        }
+    }
+
+    private fun formatEta(seconds: Long): String {
+        return when {
+            seconds >= 3600 -> {
+                val hours = seconds / 3600
+                val mins = (seconds % 3600) / 60
+                String.format(Locale.US, "%dh %02dm remaining", hours, mins)
+            }
+            seconds >= 60 -> {
+                val mins = seconds / 60
+                val secs = seconds % 60
+                String.format(Locale.US, "%dm %02ds remaining", mins, secs)
+            }
+            seconds > 0 -> "${seconds}s remaining"
+            else -> "--"
+        }
+    }
 }
+
