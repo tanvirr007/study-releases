@@ -237,7 +237,7 @@ object UpdateChecker {
 
         // Fetch theme colors dynamically
         val typedArray = activity.obtainStyledAttributes(intArrayOf(
-            com.google.android.material.R.attr.colorPrimary,
+            android.R.attr.colorPrimary,
             android.R.attr.textColorPrimary,
             android.R.attr.textColorSecondary
         ))
@@ -467,6 +467,7 @@ object UpdateChecker {
                 speedTextView = speedTextView,
                 etaTextView = etaTextView,
                 infoTextView = infoTextView,
+                secondaryTextColor = secondaryTextColor,
                 positiveButton = positiveButton,
                 negativeButton = negativeButton,
                 dialog = dialog,
@@ -488,6 +489,7 @@ object UpdateChecker {
         speedTextView: TextView,
         etaTextView: TextView,
         infoTextView: TextView,
+        secondaryTextColor: Int,
         positiveButton: Button,
         negativeButton: Button,
         dialog: AlertDialog,
@@ -675,6 +677,7 @@ object UpdateChecker {
                                 speedTextView = speedTextView,
                                 etaTextView = etaTextView,
                                 infoTextView = infoTextView,
+                                secondaryTextColor = secondaryTextColor,
                                 positiveButton = positiveButton,
                                 negativeButton = negativeButton,
                                 dialog = dialog,
@@ -756,6 +759,7 @@ object UpdateChecker {
                             speedTextView = speedTextView,
                             etaTextView = etaTextView,
                             infoTextView = infoTextView,
+                            secondaryTextColor = secondaryTextColor,
                             positiveButton = positiveButton,
                             negativeButton = negativeButton,
                             dialog = dialog,
