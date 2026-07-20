@@ -22,6 +22,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -408,9 +409,15 @@ object UpdateChecker {
 
         container.addView(progressContainer)
 
+        val scrollView = ScrollView(activity).apply {
+            isFillViewport = true
+            isScrollbarFadingEnabled = false
+            addView(container)
+        }
+
         val dialog = MaterialAlertDialogBuilder(activity)
             .setTitle("Update Available")
-            .setView(container)
+            .setView(scrollView)
             .setCancelable(false)
             .setPositiveButton("Update Now", null)
             .setNegativeButton("Later") { d, _ ->
