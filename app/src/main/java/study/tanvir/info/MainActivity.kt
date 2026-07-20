@@ -153,6 +153,7 @@ class MainActivity : AppCompatActivity() {
         setupSwipeToRefresh()
         setupLockScreen()
         checkPostUpdateToast()
+        OtaCheckWorker.schedule(applicationContext)
         handleDeepLink(intent)
         startInitialLoadIfNeeded()
     }
@@ -187,6 +188,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleDeepLink(intent: Intent?) {
+        if (intent?.getBooleanExtra(UpdateChecker.EXTRA_AUTO_UPDATE_DIALOG, false) == true) {
+            intent.removeExtra(UpdateChecker.EXTRA_AUTO_UPDATE_DIALOG)
+            UpdateChecker.checkForUpdates(this, isManualCheck = true)
+            return
+        }
+
         val data: Uri? = intent?.data
         if (data != null) {
             val scheme = data.scheme
