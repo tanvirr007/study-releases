@@ -1,6 +1,6 @@
 {
-  "versionCode": 76,
-  "versionName": "v4.5.76",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.76/CQ.apk",
-  "changelog": "* **fix: make update dialog scrollable** (ce61a40)\n  - Wrap update dialog layout container in a ScrollView so long changelogs can be scrolled smoothly\n"
+  "versionCode": 79,
+  "versionName": "v4.5.79",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.79/CQ.apk",
+  "changelog": "* **feat: add background update checker** (8e8494c)\n  - Add WorkManager CoroutineWorker for periodic 15-minute background OTA checks\n  - Schedule OtaCheckWorker automatically on connected networks in MainActivity\n  - Add androidx.work runtime dependency to Gradle configuration\n  - Cache last notified version in SharedPreferences to prevent duplicate alerts\n  - Launch app directly into Material update dialog when clicking notifications\n  - Upgrade notification channel priority to high with custom OTA title text\n  - Add curl push step to GitHub Actions workflow for instant ntfy notifications\n  - Handle extra update intent flag when app opens from notification tap\n* **style: reorder launcher shortcuts** (434b4ff)\n  - Move GitHub shortcut to first position and Telegram to second position\n"
 }
