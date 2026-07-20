@@ -224,6 +224,8 @@ class MainActivity : AppCompatActivity() {
         settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
+            loadsImagesAutomatically = true
+            blockNetworkImage = false
             useWideViewPort = true
             loadWithOverviewMode = true
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
@@ -260,6 +262,11 @@ class MainActivity : AppCompatActivity() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
                 
+                // Only intercept top-level main frame page navigation, never sub-resources (images, css, js, iframes)
+                if (request?.isForMainFrame == false) {
+                    return false
+                }
+
                 // If it's an internal URL (matching our base web app, local files, or content), load inside WebView
                 if (url.startsWith(WEB_URL) || url.startsWith("file://") || url.startsWith("content://")) {
                     return false
