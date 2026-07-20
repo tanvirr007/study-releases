@@ -1,6 +1,6 @@
 {
-  "versionCode": 73,
-  "versionName": "v4.5.73",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.73/CQ.apk",
-  "changelog": "* **fix: guarantee manual check feedback** (45efd63)\n  - Use isManualCheckRequested atomic boolean to prevent dropping manual checks during concurrent auto-checks\n  - Maintain currentActivityRef to ensure update dialog pops up reliably when triggered from launcher shortcuts\n"
+  "versionCode": 76,
+  "versionName": "v4.5.76",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.76/CQ.apk",
+  "changelog": "* **fix: make update dialog scrollable** (ce61a40)\n  - Wrap update dialog layout container in a ScrollView so long changelogs can be scrolled smoothly\n"
 }
