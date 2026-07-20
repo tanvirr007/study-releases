@@ -109,6 +109,114 @@ class MainActivity : AppCompatActivity() {
                 }
             })();
         """.trimIndent()
+
+        private val jsThemeHook = """
+            (function() {
+                if (window.__themeObserverInstalled) {
+                    try { if (window.__notifyTheme) window.__notifyTheme(); } catch(e) {}
+                    return;
+                }
+                window.__themeObserverInstalled = true;
+
+                function colorToHex(colorStr) {
+                    if (!colorStr) return null;
+                    if (colorStr.startsWith('#')) return colorStr;
+                    const match = colorStr.match(/\d+/g);
+                    if (match && match.length >= 3) {
+                        const r = parseInt(match[0], 10).toString(16).padStart(2, '0');
+                        const g = parseInt(match[1], 10).toString(16).padStart(2, '0');
+                        const b = parseInt(match[2], 10).toString(16).padStart(2, '0');
+                        return '#' + r + g + b;
+                    }
+                    return null;
+                }
+
+                function getThemeInfo() {
+                    const docEl = document.documentElement;
+                    const body = document.body;
+
+                    let isDark = docEl.classList.contains('dark') ||
+                                 docEl.classList.contains('dark-mode') ||
+                                 docEl.classList.contains('theme-dark') ||
+                                 (body && (body.classList.contains('dark') || body.classList.contains('dark-mode') || body.classList.contains('theme-dark')));
+
+                    const themeAttr = docEl.getAttribute('data-theme') || docEl.getAttribute('theme') ||
+                                      (body && (body.getAttribute('data-theme') || body.getAttribute('theme')));
+                    if (themeAttr === 'dark' || themeAttr === 'night') isDark = true;
+                    else if (themeAttr === 'light') isDark = false;
+
+                    let rawColor = null;
+                    const metaTheme = document.querySelector('meta[name="theme-color"]');
+                    if (metaTheme && metaTheme.content) {
+                        rawColor = metaTheme.content;
+                    } else {
+                        const targetEl = body || docEl;
+                        if (targetEl) {
+                            const bg = window.getComputedStyle(targetEl).backgroundColor;
+                            if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+                                rawColor = bg;
+                            }
+                        }
+                    }
+
+                    const hexColor = colorToHex(rawColor);
+
+                    if (!isDark && hexColor) {
+                        const r = parseInt(hexColor.slice(1, 3), 16);
+                        const g = parseInt(hexColor.slice(3, 5), 16);
+                        const b = parseInt(hexColor.slice(5, 7), 16);
+                        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                        if (brightness < 128) {
+                            isDark = true;
+                        }
+                    }
+
+                    return { isDark: isDark, color: hexColor };
+                }
+
+                window.__notifyTheme = function() {
+                    try {
+                        if (window.ThemeBridge && window.ThemeBridge.onThemeChanged) {
+                            const info = getThemeInfo();
+                            window.ThemeBridge.onThemeChanged(info.isDark, info.color || "");
+                        }
+                    } catch(e) {}
+                };
+
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', window.__notifyTheme);
+                } else {
+                    window.__notifyTheme();
+                }
+
+                const observer = new MutationObserver(function() {
+                    window.__notifyTheme();
+                });
+
+                observer.observe(document.documentElement, {
+                    attributes: true,
+                    attributeFilter: ['class', 'data-theme', 'theme', 'style'],
+                    childList: true,
+                    subtree: false
+                });
+
+                if (document.body) {
+                    observer.observe(document.body, {
+                        attributes: true,
+                        attributeFilter: ['class', 'data-theme', 'theme', 'style']
+                    });
+                } else {
+                    document.addEventListener('DOMContentLoaded', function() {
+                        if (document.body) {
+                            observer.observe(document.body, {
+                                attributes: true,
+                                attributeFilter: ['class', 'data-theme', 'theme', 'style']
+                            });
+                        }
+                    });
+                }
+            })();
+        """.trimIndent()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -137,8 +245,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Initialize white background theme immediately so dialogs appear over clean white
-        updateSystemBarTheme(WEB_URL)
+        // Initialize default background theme immediately so dialogs appear over clean background
+        applyTheme(isDark = false, colorHex = null)
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -248,6 +356,11 @@ class MainActivity : AppCompatActivity() {
             "PrintBridge"
         )
 
+        addJavascriptInterface(
+            ThemeBridge(this@MainActivity),
+            "ThemeBridge"
+        )
+
         webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
@@ -273,6 +386,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 view?.evaluateJavascript(jsBlobHook, null)
+                view?.evaluateJavascript(jsThemeHook, null)
 
                 if (url?.endsWith("/dashboard") == true
                     || url?.endsWith("/dashboard/") == true
@@ -285,7 +399,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 view?.evaluateJavascript(jsBlobHook, null)
-                url?.let { updateSystemBarTheme(it) }
+                view?.evaluateJavascript(jsThemeHook, null)
                 android.webkit.CookieManager.getInstance().flush()
                 binding.swipeRefreshLayout.isRefreshing = false
 
@@ -316,7 +430,7 @@ class MainActivity : AppCompatActivity() {
 
         webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                url?.let { updateSystemBarTheme(it) }
+                view?.evaluateJavascript(jsThemeHook, null)
             }
 
             override fun onShowFileChooser(
@@ -366,22 +480,35 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateSystemBarTheme(url: String) {
-        val isHomePage = url == WEB_URL || url == "$WEB_URL/"
+    fun applyTheme(isDark: Boolean, colorHex: String?) {
+        if (binding.lockOverlay.visibility == View.VISIBLE) return
 
         val controller = WindowInsetsControllerCompat(window, window.decorView)
+        val backgroundColor = parseColorOrDefault(colorHex, isDark)
 
-        if (isHomePage) {
-            // LIGHT system bars (dark icons)
-            controller.isAppearanceLightStatusBars = true
-            controller.isAppearanceLightNavigationBars = true
-            binding.root.setBackgroundColor(Color.WHITE)
-        } else {
-            // DARK system bars (light icons)
+        if (isDark) {
             controller.isAppearanceLightStatusBars = false
             controller.isAppearanceLightNavigationBars = false
-            binding.root.setBackgroundColor("#112240".toColorInt())
+        } else {
+            controller.isAppearanceLightStatusBars = true
+            controller.isAppearanceLightNavigationBars = true
         }
+
+        binding.root.setBackgroundColor(backgroundColor)
+        window.statusBarColor = backgroundColor
+        window.navigationBarColor = backgroundColor
+    }
+
+    private fun parseColorOrDefault(colorHex: String?, isDark: Boolean): Int {
+        if (!colorHex.isNullOrBlank()) {
+            try {
+                val cleanHex = colorHex.trim()
+                if (cleanHex.startsWith("#")) {
+                    return Color.parseColor(cleanHex)
+                }
+            } catch (_: Exception) {}
+        }
+        return if (isDark) "#121212".toColorInt() else Color.WHITE
     }
 
     private fun handleBackPress() {
@@ -537,8 +664,8 @@ class MainActivity : AppCompatActivity() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 isAuthenticated = true
                 binding.lockOverlay.visibility = View.GONE
-                // Restore system bar theme based on current web page URL
-                updateSystemBarTheme(binding.webView.url ?: WEB_URL)
+                // Restore system bar theme based on current web page theme
+                binding.webView.evaluateJavascript(jsThemeHook, null)
                 checkFirstLaunchPermissions()
             }
 
@@ -570,7 +697,7 @@ class MainActivity : AppCompatActivity() {
             // If biometric is unavailable, unlock anyway
             isAuthenticated = true
             binding.lockOverlay.visibility = View.GONE
-            updateSystemBarTheme(binding.webView.url ?: WEB_URL)
+            binding.webView.evaluateJavascript(jsThemeHook, null)
             checkFirstLaunchPermissions()
             shouldKeepSplashScreen = false
         }
