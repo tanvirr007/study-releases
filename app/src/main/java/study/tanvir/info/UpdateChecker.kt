@@ -22,7 +22,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
-import android.widget.ScrollView
+import androidx.core.widget.NestedScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -411,9 +411,16 @@ object UpdateChecker {
 
         container.addView(progressContainer)
 
-        val scrollView = ScrollView(activity).apply {
+        val scrollView = object : NestedScrollView(activity) {
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                val maxHeightPx = (activity.resources.displayMetrics.heightPixels * 0.45).toInt()
+                val boundedHeightSpec = View.MeasureSpec.makeMeasureSpec(maxHeightPx, View.MeasureSpec.AT_MOST)
+                super.onMeasure(widthMeasureSpec, boundedHeightSpec)
+            }
+        }.apply {
             isFillViewport = true
             isScrollbarFadingEnabled = false
+            isVerticalScrollBarEnabled = true
             addView(container)
         }
 
