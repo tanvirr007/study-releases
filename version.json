@@ -1,6 +1,6 @@
 {
-  "versionCode": 70,
-  "versionName": "v4.5.70",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.70/CQ.apk",
-  "changelog": "* **fix: resolve release build symbols** (574f07f)\n  - Replace com.google.android.material.R.attr.colorPrimary with android.R.attr.colorPrimary\n  - Pass secondaryTextColor into downloadApk parameter scope\n* **feat: improve OTA download dialog UI** (fde6036)\n  - Add version transition banner and real-time metrics (speed, size, ETA)\n  - Implement dynamic status message stage transitions and APK package verification\n  - Add safe download cancellation support and Material Design polish\n* **fix: verify OTA update installation** (4919e65)\n  - Store target version and version code as pending update before installing\n  - Compare current installed app version with pending update version on launch\n  - Only show success toast and clear pending state when app versions match\n"
+  "versionCode": 71,
+  "versionName": "v4.5.71",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.71/CQ.apk",
+  "changelog": "* **fix: guarantee manual check feedback** (45efd63)\n  - Use isManualCheckRequested atomic boolean to prevent dropping manual checks during concurrent auto-checks\n  - Maintain currentActivityRef to ensure update dialog pops up reliably when triggered from launcher shortcuts\n"
 }
