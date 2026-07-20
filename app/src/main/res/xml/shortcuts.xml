@@ -1,16 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
     <shortcut
-        android:shortcutId="shortcut_telegram"
-        android:enabled="true"
-        android:icon="@drawable/ic_shortcut_telegram"
-        android:shortcutShortLabel="@string/shortcut_telegram_short"
-        android:shortcutLongLabel="@string/shortcut_telegram_long">
-        <intent
-            android:action="android.intent.action.VIEW"
-            android:data="https://t.me/cq_releases" />
-    </shortcut>
-    <shortcut
         android:shortcutId="shortcut_github"
         android:enabled="true"
         android:icon="@drawable/ic_shortcut_github"
@@ -19,6 +9,16 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:data="https://github.com/tanvirr007/study-releases" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="shortcut_telegram"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_telegram"
+        android:shortcutShortLabel="@string/shortcut_telegram_short"
+        android:shortcutLongLabel="@string/shortcut_telegram_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="https://t.me/cq_releases" />
     </shortcut>
     <shortcut
         android:shortcutId="shortcut_check_updates"
