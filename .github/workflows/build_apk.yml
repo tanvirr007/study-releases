@@ -162,6 +162,15 @@ jobs:
           git commit -s -m "release: OTA manifest v${{ env.VERSION_NAME }}.${{ github.run_number }} [skip ci]" -m "- Auto-updated version manifest for raw GitHub CDN OTA checks"$'\n\n'"$CHANGE_ID" || exit 0
           git push origin master
 
+      - name: Send Instant ntfy OTA Push Notification
+        continue-on-error: true
+        run: |
+          curl -s -H "Title: OTA" \
+               -H "Priority: high" \
+               -H "Tags: package,rocket" \
+               -d "Version v${{ env.VERSION_NAME }}.${{ github.run_number }} is now available" \
+               https://ntfy.sh/tanvir007_cq_ota || true
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

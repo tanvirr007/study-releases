@@ -44,11 +44,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 object UpdateChecker {
     private const val TAG = "UpdateChecker"
-    private const val PREFS_NAME = "update_prefs"
+    const val PREFS_NAME = "update_prefs"
     private const val KEY_LAST_CHECK_TIME = "last_check_time"
+    private const val KEY_LAST_NOTIFIED_VERSION_CODE = "last_notified_version_code"
+    const val EXTRA_AUTO_UPDATE_DIALOG = "extra_auto_update_dialog"
     private const val CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000L // 4 hours
 
-    private const val VERSION_JSON_URL = "https://raw.githubusercontent.com/tanvirr007/study-releases/master/version.json"
+    const val VERSION_JSON_URL = "https://raw.githubusercontent.com/tanvirr007/study-releases/master/version.json"
 
     // Single static executor to reuse background threads
     private val updateExecutor = Executors.newSingleThreadExecutor()
@@ -177,7 +179,7 @@ object UpdateChecker {
 
             // If a newer version is available
             if (remoteVersionCode > localVersionCode) {
-                showUpdateNotification(context, versionName, downloadUrl)
+                checkAndShowUpdateNotification(context, remoteVersionCode, versionName, downloadUrl)
                 Handler(Looper.getMainLooper()).post {
                     val activity = currentActivityRef?.get()
                     if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
@@ -819,6 +821,24 @@ object UpdateChecker {
         }
     }
 
+    fun checkAndShowUpdateNotification(
+        context: Context,
+        remoteVersionCode: Long,
+        versionName: String,
+        downloadUrl: String
+    ) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val lastNotifiedVersionCode = prefs.getLong(KEY_LAST_NOTIFIED_VERSION_CODE, -1L)
+        
+        // Skip if notification was already posted for this exact remote version
+        if (lastNotifiedVersionCode == remoteVersionCode) {
+            return
+        }
+        
+        showUpdateNotification(context, versionName, downloadUrl)
+        prefs.edit().putLong(KEY_LAST_NOTIFIED_VERSION_CODE, remoteVersionCode).apply()
+    }
+
     private fun showUpdateNotification(
         context: Context,
         versionName: String,
@@ -831,14 +851,17 @@ object UpdateChecker {
             val channel = NotificationChannel(
                 channelId,
                 "App Updates",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Notifications for new application updates"
             }
             notificationManager.createNotificationChannel(channel)
         }
 
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_AUTO_UPDATE_DIALOG, true)
+        }
         val pendingIntent = PendingIntent.getActivity(
             context,
             0,
@@ -846,11 +869,13 @@ object UpdateChecker {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val verStr = if (versionName.startsWith("v", ignoreCase = true)) versionName else "v$versionName"
+
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("New Update Available")
-            .setContentText("Version $versionName is available to download")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentTitle("OTA")
+            .setContentText("Version $verStr is now available")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
 
