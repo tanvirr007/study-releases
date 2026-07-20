@@ -1,6 +1,6 @@
 {
-  "versionCode": 74,
-  "versionName": "v4.5.74",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.74/CQ.apk",
-  "changelog": "* **fix: update dialog changelog scroll** (b7fccae)\n  - Use NestedScrollView with 35% height constraint for update changelog dialog\n  - Enable nested scrolling and persistent scrollbars\n  - Fix messageView parameter type in downloadApk\n"
+  "versionCode": 75,
+  "versionName": "v4.5.75",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.75/CQ.apk",
+  "changelog": "* **feat: dynamic webview status bar theme** (26ebe23)\n  Add dynamic light/dark status bar theme matching for WebView:\n  - Add ThemeBridge JavascriptInterface to pass theme changes from WebView to Android\n  - Inject JS MutationObserver to detect HTML/body dark class, data-theme attribute, and computed background colors\n  - Add safe rgbToHex color conversion in JS to prevent native color parsing errors\n  - Update status bar background and icon appearance dynamically on load and theme toggle\n  - Keep status bar appearance locked during biometric lock screen overlay\n"
 }
