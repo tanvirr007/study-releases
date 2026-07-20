@@ -52,16 +52,19 @@ object UpdateChecker {
     // Single static executor to reuse background threads
     private val updateExecutor = Executors.newSingleThreadExecutor()
     private val isChecking = AtomicBoolean(false)
+    private val isManualCheckRequested = AtomicBoolean(false)
     private var activeDialogRef: WeakReference<AlertDialog>? = null
+    private var currentActivityRef: WeakReference<Activity>? = null
 
     fun checkForUpdates(activity: Activity, isManualCheck: Boolean = false) {
-        val activityRef = WeakReference(activity)
+        currentActivityRef = WeakReference(activity)
         val context = activity.applicationContext
 
         // Get local version code
         val localVersionCode = getLocalVersionCode(context)
 
         if (isManualCheck) {
+            isManualCheckRequested.set(true)
             Toast.makeText(context, "Checking for updates...", Toast.LENGTH_SHORT).show()
             // Dismiss stale or currently visible dialog to display a clean new update dialog
             Handler(Looper.getMainLooper()).post {
@@ -74,7 +77,7 @@ object UpdateChecker {
         }
 
         if (!isChecking.compareAndSet(false, true)) {
-            Log.d(TAG, "Update check already in progress, skipping duplicate request.")
+            Log.d(TAG, "Update check already in progress, registered manual request on active check.")
             return
         }
 
@@ -95,6 +98,8 @@ object UpdateChecker {
                 connection.setRequestProperty("User-Agent", "CQ-WebView-App")
                 connection.setRequestProperty("Accept", "application/json")
 
+                val wasManual = isManualCheckRequested.getAndSet(false) || isManualCheck
+
                 val responseCode = connection.responseCode
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     val response = StringBuilder()
@@ -104,10 +109,10 @@ object UpdateChecker {
                             response.append(line)
                         }
                     }
-                    parseAndProcessResponse(activityRef, context, response.toString(), localVersionCode, isManualCheck)
+                    parseAndProcessResponse(context, response.toString(), localVersionCode, wasManual)
                 } else {
                     Log.e(TAG, "Server returned response code: $responseCode")
-                    if (isManualCheck) {
+                    if (wasManual) {
                         Handler(Looper.getMainLooper()).post {
                             Toast.makeText(context, "Unable to check for updates (Server: $responseCode)", Toast.LENGTH_SHORT).show()
                         }
@@ -115,7 +120,8 @@ object UpdateChecker {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to check for updates", e)
-                if (isManualCheck) {
+                val wasManual = isManualCheckRequested.getAndSet(false) || isManualCheck
+                if (wasManual) {
                     Handler(Looper.getMainLooper()).post {
                         Toast.makeText(context, "Failed to check for updates", Toast.LENGTH_SHORT).show()
                     }
@@ -153,7 +159,6 @@ object UpdateChecker {
     }
 
     private fun parseAndProcessResponse(
-        activityRef: WeakReference<Activity>,
         context: Context,
         jsonResponse: String,
         localVersionCode: Long,
@@ -173,7 +178,7 @@ object UpdateChecker {
             if (remoteVersionCode > localVersionCode) {
                 showUpdateNotification(context, versionName, downloadUrl)
                 Handler(Looper.getMainLooper()).post {
-                    val activity = activityRef.get()
+                    val activity = currentActivityRef?.get()
                     if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
                         showUpdateDialog(activity, versionName, changelog, downloadUrl, remoteVersionCode)
                     }
