@@ -154,6 +154,7 @@ class MainActivity : AppCompatActivity() {
         setupLockScreen()
         checkPostUpdateToast()
         OtaCheckWorker.schedule(applicationContext)
+        NtfyStreamListener.start(applicationContext)
         handleDeepLink(intent)
         startInitialLoadIfNeeded()
     }
