@@ -1,6 +1,6 @@
 {
-  "versionCode": 73,
-  "versionName": "v4.5.73",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.73/CQ.apk",
-  "changelog": "* **fix: guarantee manual check feedback** (45efd63)\n  - Use isManualCheckRequested atomic boolean to prevent dropping manual checks during concurrent auto-checks\n  - Maintain currentActivityRef to ensure update dialog pops up reliably when triggered from launcher shortcuts\n"
+  "versionCode": 74,
+  "versionName": "v4.5.74",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.74/CQ.apk",
+  "changelog": "* **fix: update dialog changelog scroll** (b7fccae)\n  - Use NestedScrollView with 35% height constraint for update changelog dialog\n  - Enable nested scrolling and persistent scrollbars\n  - Fix messageView parameter type in downloadApk\n"
 }
