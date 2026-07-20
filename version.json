@@ -1,6 +1,6 @@
 {
-  "versionCode": 76,
-  "versionName": "v4.5.76",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.76/CQ.apk",
-  "changelog": "* **fix: make update dialog scrollable** (ce61a40)\n  - Wrap update dialog layout container in a ScrollView so long changelogs can be scrolled smoothly\n"
+  "versionCode": 77,
+  "versionName": "v4.5.77",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.5.77/CQ.apk",
+  "changelog": "* **feat: add background update checker** (7165a1d)\n  - Add WorkManager periodic worker for background update checks\n  - Prevent duplicate notifications by tracking last notified version\n  - Launch update dialog directly when tapping update notification\n  - Add instant ntfy notification to GitHub Actions workflow\n* **style: reorder launcher shortcuts** (434b4ff)\n  - Move GitHub shortcut to first position and Telegram to second position\n"
 }
