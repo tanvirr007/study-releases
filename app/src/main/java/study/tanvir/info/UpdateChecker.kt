@@ -136,6 +136,50 @@ object UpdateChecker {
         }
     }
 
+    fun checkForUpdates(context: Context) {
+        val localVersionCode = getLocalVersionCode(context)
+        if (!isChecking.compareAndSet(false, true)) {
+            Log.d(TAG, "Update check already in progress, skipping background context request.")
+            return
+        }
+
+        updateExecutor.execute {
+            var connection: HttpURLConnection? = null
+            try {
+                val cacheBusterUrl = "$VERSION_JSON_URL?t=${System.currentTimeMillis()}"
+                val url = URL(cacheBusterUrl)
+                connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 10000
+                connection.readTimeout = 10000
+                connection.useCaches = false
+                connection.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate")
+                connection.setRequestProperty("Pragma", "no-cache")
+                connection.setRequestProperty("Expires", "0")
+                connection.setRequestProperty("User-Agent", "CQ-WebView-App")
+                connection.setRequestProperty("Accept", "application/json")
+
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val response = StringBuilder()
+                    BufferedReader(InputStreamReader(connection.inputStream)).use { reader ->
+                        var line: String?
+                        while (reader.readLine().also { line = it } != null) {
+                            response.append(line)
+                        }
+                    }
+                    parseAndProcessResponse(context, response.toString(), localVersionCode, false)
+                } else {
+                    Log.e(TAG, "Server returned response code for context update check: ${connection.responseCode}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to check for updates from context", e)
+            } finally {
+                isChecking.set(false)
+                connection?.disconnect()
+            }
+        }
+    }
+
     fun getLocalVersionCode(context: Context): Long {
         return try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
