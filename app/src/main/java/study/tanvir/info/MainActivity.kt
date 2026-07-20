@@ -652,12 +652,36 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkPostUpdateToast() {
         val prefs = getSharedPreferences("update_prefs", MODE_PRIVATE)
-        val pendingVersion = prefs.getString("pending_update_version", null) ?: return
+        val pendingVersion = prefs.getString("pending_update_version", null)
+        val pendingVersionCode = prefs.getLong("pending_update_version_code", -1L)
 
-        // Clear the flag immediately
-        prefs.edit().remove("pending_update_version").apply()
+        if (pendingVersion == null && pendingVersionCode == -1L) return
 
-        Toast.makeText(this, "Successfully updated to $pendingVersion", Toast.LENGTH_LONG).show()
+        val currentVersionCode = UpdateChecker.getLocalVersionCode(this)
+        val currentVersionName = UpdateChecker.getLocalVersionName(this)
+
+        val isMatchByCode = pendingVersionCode != -1L && currentVersionCode >= pendingVersionCode
+        val isMatchByName = pendingVersion != null && isVersionNameMatching(currentVersionName, pendingVersion)
+
+        if (isMatchByCode || isMatchByName) {
+            // Clear the pending update state only after update is confirmed
+            prefs.edit()
+                .remove("pending_update_version")
+                .remove("pending_update_version_code")
+                .apply()
+
+            val targetVersion = pendingVersion ?: if (currentVersionName.startsWith("v", ignoreCase = true)) currentVersionName else "v$currentVersionName"
+            val displayVersion = if (targetVersion.startsWith("v", ignoreCase = true)) targetVersion else "v$targetVersion"
+
+            Toast.makeText(this, "Successfully updated to $displayVersion", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun isVersionNameMatching(current: String, pending: String): Boolean {
+        if (current.isBlank() || pending.isBlank()) return false
+        val cleanCurrent = current.trim().removePrefix("v").removePrefix("V")
+        val cleanPending = pending.trim().removePrefix("v").removePrefix("V")
+        return cleanCurrent.equals(cleanPending, ignoreCase = true)
     }
 }
 

@@ -125,7 +125,7 @@ object UpdateChecker {
         }
     }
 
-    private fun getLocalVersionCode(context: Context): Long {
+    fun getLocalVersionCode(context: Context): Long {
         return try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -137,6 +137,16 @@ object UpdateChecker {
         } catch (e: Exception) {
             Log.e(TAG, "Error getting local version code", e)
             1L
+        }
+    }
+
+    fun getLocalVersionName(context: Context): String {
+        return try {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            packageInfo.versionName ?: ""
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting local version name", e)
+            ""
         }
     }
 
@@ -438,9 +448,12 @@ object UpdateChecker {
                     positiveButton.visibility = View.VISIBLE
 
                     positiveButton.setOnClickListener {
-                        // Save version name so MainActivity can show success toast on relaunch
+                        // Save version name and version code so MainActivity can check post-update status on relaunch
                         val prefs = finalAct.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                        prefs.edit().putString("pending_update_version", versionName).apply()
+                        prefs.edit()
+                            .putString("pending_update_version", versionName)
+                            .putLong("pending_update_version_code", remoteVersionCode)
+                            .apply()
 
                         installApk(finalAct, apkFile)
                         dialog.dismiss()
