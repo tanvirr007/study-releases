@@ -27,6 +27,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
+import androidx.core.widget.NestedScrollView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -279,13 +280,34 @@ object UpdateChecker {
         }
         container.addView(versionPill)
 
-        // Changelog message view
+        // Constrained NestedScrollView for changelog details to prevent dialog overflow on long content
+        val maxScrollHeight = (activity.resources.displayMetrics.heightPixels * 0.35).toInt()
+        val scrollContainer = object : NestedScrollView(activity) {
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                val customHeightSpec = MeasureSpec.makeMeasureSpec(maxScrollHeight, MeasureSpec.AT_MOST)
+                super.onMeasure(widthMeasureSpec, customHeightSpec)
+            }
+        }.apply {
+            isVerticalScrollBarEnabled = true
+            isScrollbarFadingEnabled = false
+            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+            isNestedScrollingEnabled = true
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        // Changelog message view inside NestedScrollView
         val messageView = TextView(activity).apply {
             text = spannableMessage
             textSize = 14f
             setTextColor(primaryTextColor)
+            setLineSpacing(0f, 1.15f)
+            setPadding(0, 0, 0, (8 * density).toInt())
         }
-        container.addView(messageView)
+        scrollContainer.addView(messageView)
+        container.addView(scrollContainer)
 
         // Progress section container (initially GONE)
         val progressContainer = LinearLayout(activity).apply {
@@ -463,7 +485,7 @@ object UpdateChecker {
             downloadApk(
                 activity = activity,
                 downloadUrl = downloadUrl,
-                messageView = messageView,
+                messageView = scrollContainer,
                 progressContainer = progressContainer,
                 statusTextView = statusTextView,
                 percentageTextView = percentageTextView,
@@ -485,7 +507,7 @@ object UpdateChecker {
     private fun downloadApk(
         activity: Activity,
         downloadUrl: String,
-        messageView: TextView,
+        messageView: View,
         progressContainer: View,
         statusTextView: TextView,
         percentageTextView: TextView,
