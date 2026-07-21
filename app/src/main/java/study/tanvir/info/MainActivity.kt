@@ -224,6 +224,7 @@ class MainActivity : AppCompatActivity() {
         settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
+            databaseEnabled = true
             loadsImagesAutomatically = true
             blockNetworkImage = false
             useWideViewPort = true
@@ -235,6 +236,13 @@ class MainActivity : AppCompatActivity() {
             allowContentAccess = true
             allowFileAccessFromFileURLs = true
             allowUniversalAccessFromFileURLs = true
+            javaScriptCanOpenWindowsAutomatically = true
+
+            // Strip '; wv' so Vercel, Cloudflare, and modern Web APIs treat WebView as standard Chrome mobile
+            val defaultUserAgent = userAgentString
+            if (defaultUserAgent != null && defaultUserAgent.contains("; wv")) {
+                userAgentString = defaultUserAgent.replace("; wv", "").replace("Version/4.0 ", "")
+            }
         }
 
         // Enable cookies and accept third-party cookies
@@ -267,22 +275,31 @@ class MainActivity : AppCompatActivity() {
                     return false
                 }
 
-                // If it's an internal URL (matching our base web app, local files, or content), load inside WebView
-                if (url.startsWith(WEB_URL) || url.startsWith("file://") || url.startsWith("content://")) {
+                val targetUri = request?.url ?: Uri.parse(url)
+                val targetHost = targetUri.host?.lowercase()
+                val targetScheme = targetUri.scheme?.lowercase()
+
+                val baseHost = Uri.parse(WEB_URL).host?.lowercase() ?: "study-tanvirr007.vercel.app"
+
+                // If it's an internal URL (matching base host, vercel app, local files, content, or about), load inside WebView
+                if (targetScheme == "http" || targetScheme == "https") {
+                    if (targetHost != null && (targetHost == baseHost || targetHost.endsWith(".vercel.app") || targetHost.contains("study-tanvirr007"))) {
+                        return false
+                    }
+                } else if (targetScheme == "file" || targetScheme == "content" || targetScheme == "about") {
                     return false
                 }
-                
-                // For all other links (external websites or custom schemes like tel, mailto, tg, etc.)
+
+                // For external links or custom schemes (tel, mailto, tg, etc.), launch in external handler/browser
                 try {
-                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, targetUri)
                     view?.context?.startActivity(intent)
                     return true
                 } catch (e: Exception) {
-                    // Fallback: If it's an external web link but no browser is found, load it in the WebView
-                    if (url.startsWith("http://") || url.startsWith("https://")) {
+                    if (targetScheme == "http" || targetScheme == "https") {
                         return false
                     }
-                    return true // Consume custom protocols to prevent unsupported scheme crashes
+                    return true
                 }
             }
 
@@ -319,13 +336,27 @@ class MainActivity : AppCompatActivity() {
             ) {
                 super.onReceivedError(view, request, error)
                 if (request?.isForMainFrame == true) {
-                    binding.webView.visibility = View.GONE
-                    binding.offlineLayout.visibility = View.VISIBLE
-                    binding.swipeRefreshLayout.isRefreshing = false
-                    // Hide splash screen immediately if first page load fails
-                    isWebViewFirstPageLoaded = true
-                    shouldKeepSplashScreen = false
+                    val errorCode = error?.errorCode
+                    // Ignore non-fatal cancellations / redirects
+                    if (errorCode == WebViewClient.ERROR_UNKNOWN || errorCode == WebViewClient.ERROR_REDIRECT_LOOP) {
+                        return
+                    }
+                    if (!isNetworkAvailable() || errorCode == WebViewClient.ERROR_HOST_LOOKUP || errorCode == WebViewClient.ERROR_CONNECT || errorCode == WebViewClient.ERROR_TIMEOUT) {
+                        binding.webView.visibility = View.GONE
+                        binding.offlineLayout.visibility = View.VISIBLE
+                        binding.swipeRefreshLayout.isRefreshing = false
+                        isWebViewFirstPageLoaded = true
+                        shouldKeepSplashScreen = false
+                    }
                 }
+            }
+
+            override fun onReceivedSslError(
+                view: WebView?,
+                handler: android.webkit.SslErrorHandler?,
+                error: android.net.http.SslError?
+            ) {
+                handler?.proceed()
             }
         }
 
