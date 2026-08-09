@@ -1,6 +1,6 @@
 {
-  "versionCode": 84,
-  "versionName": "v4.6.84",
-  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.6.84/CQ.apk",
-  "changelog": "* **fix: webview app page loading** (7651cdd)\n  - Replace rigid URL prefix matching with domain host checking in shouldOverrideUrlLoading\n  - Enable Web Database storage (databaseEnabled) for IndexedDB support in Vite app\n  - Strip ; wv token from user agent string to prevent Cloudflare/Vercel blocks\n  - Ignore non-fatal request cancellation errors in onReceivedError\n  - Add SSL error handler fallback\n"
+  "versionCode": 85,
+  "versionName": "v4.6.85",
+  "downloadUrl": "https://github.com/tanvirr007/study-releases/releases/download/v4.6.85/CQ.apk",
+  "changelog": "* **test** (75a31a7)\n"
 }
