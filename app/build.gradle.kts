@@ -16,7 +16,7 @@ android {
         applicationId = "app.study.tanvir.info"
         minSdk = 28
         targetSdk = 36
-        versionCode = 52
+        versionCode = 53
         versionName = "4.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
